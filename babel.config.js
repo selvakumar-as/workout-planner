@@ -1,9 +1,7 @@
 /** @type {import('@babel/core').TransformOptions} */
-module.exports = {
-  presets: [
-    ['@babel/preset-typescript', { allExtensions: true }],
-  ],
-  plugins: [
-    '@babel/plugin-transform-modules-commonjs',
-  ],
+module.exports = function (api) {
+  api.cache(true);
+  return {
+    presets: ["babel-preset-expo"],
+  };
 };
