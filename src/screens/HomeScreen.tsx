@@ -7,15 +7,13 @@ import {
   Text,
   View,
 } from "react-native";
+import { router } from "expo-router";
 import { useSessionViewModel } from "../hooks/useSessionViewModel";
 import type { Session } from "../types";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-/** Placeholder workoutId used until a real workout-selection flow is built. */
-const PLACEHOLDER_WORKOUT_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
 const MAX_HISTORY_ITEMS = 5;
 
@@ -84,6 +82,13 @@ const HomeScreen: FC<HomeScreenProps> = () => {
       {/* Title */}
       <View style={styles.header}>
         <Text style={styles.title}>WorkoutPlanner</Text>
+        <Pressable
+          style={styles.workoutsButton}
+          onPress={() => router.push("/workouts")}
+          accessibilityLabel="Navigate to My Workouts"
+        >
+          <Text style={styles.workoutsButtonText}>My Workouts</Text>
+        </Pressable>
       </View>
 
       {/* Active session section */}
@@ -94,6 +99,13 @@ const HomeScreen: FC<HomeScreenProps> = () => {
             Status: {vm.sessionStatus ?? "—"}
           </Text>
           <View style={styles.activeSessionActions}>
+            <Pressable
+              style={[styles.button, styles.buttonResume]}
+              onPress={() => router.push("/session")}
+              accessibilityLabel="Resume active session"
+            >
+              <Text style={styles.buttonResumeText}>Resume</Text>
+            </Pressable>
             <Pressable
               style={[styles.button, styles.buttonComplete]}
               onPress={() => vm.completeSession()}
@@ -116,7 +128,7 @@ const HomeScreen: FC<HomeScreenProps> = () => {
       {!vm.isSessionActive && (
         <Pressable
           style={[styles.button, styles.buttonStart]}
-          onPress={() => vm.startSession(PLACEHOLDER_WORKOUT_ID)}
+          onPress={() => router.push("/select-workout")}
           accessibilityLabel="Start a new workout session"
         >
           <Text style={styles.buttonText}>Start Workout</Text>
@@ -159,6 +171,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#1A1A1A",
   },
+  workoutsButton: {
+    marginTop: 12,
+    backgroundColor: "#F0F4FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  workoutsButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
@@ -179,10 +207,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
     elevation: 2,
   },
   historyItemInfo: {
@@ -224,8 +249,8 @@ const styles = StyleSheet.create({
   // ---- Buttons ----
   button: {
     borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -233,20 +258,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563EB",
     marginHorizontal: 20,
     marginTop: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+  },
+  buttonResume: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#059669",
+    marginRight: 6,
   },
   buttonComplete: {
     flex: 1,
     backgroundColor: "#059669",
-    marginRight: 8,
+    marginRight: 6,
   },
   buttonAbandon: {
     flex: 1,
     backgroundColor: "#DC2626",
-    marginLeft: 8,
   },
   buttonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  buttonResumeText: {
+    color: "#059669",
+    fontSize: 14,
     fontWeight: "600",
   },
   // ---- Active session card ----
@@ -256,10 +294,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 16,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
     elevation: 3,
   },
   activeSessionTitle: {
