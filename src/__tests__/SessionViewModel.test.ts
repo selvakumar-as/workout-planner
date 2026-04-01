@@ -7,7 +7,7 @@
  */
 
 import { SessionViewModel } from '../viewmodels/SessionViewModel';
-import { sessionStoreApi } from '../store/sessionStore';
+import { sessionStoreApi } from '../stores/sessionStore';
 
 // ---------------------------------------------------------------------------
 // Fixed test doubles

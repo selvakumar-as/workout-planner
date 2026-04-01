@@ -6,6 +6,7 @@ export {
   EquipmentValues,
   ExerciseSchema,
   WorkoutExerciseSchema,
+  AutoTimerConfigSchema,
   WorkoutSchema,
   parseExercise,
   parseWorkout,
@@ -16,6 +17,7 @@ export type {
   Equipment,
   Exercise,
   WorkoutExercise,
+  AutoTimerConfig,
   Workout,
 } from "./workout";
 
