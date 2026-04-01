@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useWorkoutViewModel } from "../hooks/useWorkoutViewModel";
+import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import type { Workout } from "../types";
 
 // ---------------------------------------------------------------------------

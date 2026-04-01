@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useWorkoutViewModel } from "../hooks/useWorkoutViewModel";
+import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import type { Exercise, ExerciseGroup, WorkoutExercise } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -113,6 +113,13 @@ const WorkoutDetailScreen: FC<WorkoutDetailScreenProps> = () => {
     });
   };
 
+  const handleConfigureTimer = () => {
+    router.push({
+      pathname: "/workouts/[id]/timer-config",
+      params: { id: workoutId },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -157,6 +164,29 @@ const WorkoutDetailScreen: FC<WorkoutDetailScreenProps> = () => {
           accessibilityLabel="Add exercise to workout"
         >
           <Text style={styles.addButtonText}>Add Exercise</Text>
+        </Pressable>
+
+        {/* Auto Timer Config */}
+        {workout.autoTimerConfig !== undefined && (
+          <View style={styles.autoConfigSummary}>
+            <Text style={styles.autoConfigSummaryText}>
+              {"Auto: "}
+              {workout.autoTimerConfig.secondsPerSet}
+              {"s/set · "}
+              {workout.autoTimerConfig.restBetweenSetsSecs}
+              {"s set rest · "}
+              {workout.autoTimerConfig.restBetweenExercisesSecs}
+              {"s exercise rest"}
+            </Text>
+          </View>
+        )}
+
+        <Pressable
+          style={styles.timerConfigButton}
+          onPress={handleConfigureTimer}
+          accessibilityLabel="Configure auto timer for this workout"
+        >
+          <Text style={styles.timerConfigButtonText}>Configure Auto Timer</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -269,6 +299,36 @@ const styles = StyleSheet.create({
   },
   backLinkText: {
     color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  autoConfigSummary: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  autoConfigSummaryText: {
+    fontSize: 13,
+    color: "#1D4ED8",
+    fontWeight: "500",
+  },
+  timerConfigButton: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    borderWidth: 1.5,
+    borderColor: "#2563EB",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timerConfigButtonText: {
+    color: "#2563EB",
     fontSize: 15,
     fontWeight: "600",
   },

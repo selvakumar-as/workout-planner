@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import { useSessionViewModel } from "../hooks/useSessionViewModel";
+import { useSessionViewModel } from "../viewmodels/useSessionViewModel";
 import type { Session } from "../types";
 
 // ---------------------------------------------------------------------------

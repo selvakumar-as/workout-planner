@@ -8,12 +8,16 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import { useSessionViewModel } from "../hooks/useSessionViewModel";
-import { useWorkoutViewModel } from "../hooks/useWorkoutViewModel";
+import { useSessionViewModel } from "../viewmodels/useSessionViewModel";
+import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import { useStopwatch } from "../hooks/useStopwatch";
 import { useCountdown } from "../hooks/useCountdown";
+import { useWorkoutSound } from "../hooks/useWorkoutSound";
+import { useAutoSession, GRACE_PERIOD_MS } from "../hooks/useAutoSession";
 import { formatElapsed, formatCountdown } from "../utils/formatTime";
-import type { ExerciseGroup } from "../types";
+import AutoModeToggle from "../components/AutoModeToggle";
+import GracePeriodOverlay from "../components/GracePeriodOverlay";
+import type { AutoTimerConfig, ExerciseGroup } from "../types";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -35,7 +39,7 @@ const GROUP_BADGE_CONFIG: Record<
 };
 
 // ---------------------------------------------------------------------------
-// RestTimer sub-component
+// RestTimer sub-component (manual mode)
 // ---------------------------------------------------------------------------
 
 interface RestTimerProps {
@@ -47,13 +51,11 @@ interface RestTimerProps {
 const RestTimer: FC<RestTimerProps> = ({ restMs, onDone, onSkip }) => {
   const countdown = useCountdown(restMs);
 
-  // Auto-start when this component mounts.
   useEffect(() => {
     countdown.start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Notify parent when done.
   useEffect(() => {
     if (countdown.isDone) {
       onDone();
@@ -120,14 +122,346 @@ const restStyles = StyleSheet.create({
 });
 
 // ---------------------------------------------------------------------------
+// AutoRunningCard sub-component
+// ---------------------------------------------------------------------------
+
+interface AutoRunningCardProps {
+  remaining: number; // ms
+  onStopEarly: () => void;
+}
+
+const AutoRunningCard: FC<AutoRunningCardProps> = ({ remaining, onStopEarly }) => (
+  <View style={autoCardStyles.container}>
+    <Text style={autoCardStyles.label}>Set Running</Text>
+    <Text
+      style={autoCardStyles.timer}
+      accessibilityLabel={`Set time remaining ${formatCountdown(remaining)}`}
+    >
+      {formatCountdown(remaining)}
+    </Text>
+    <Pressable
+      style={autoCardStyles.stopButton}
+      onPress={onStopEarly}
+      accessibilityLabel="Stop set early and log it"
+    >
+      <Text style={autoCardStyles.stopButtonText}>Stop Early</Text>
+    </Pressable>
+  </View>
+);
+
+const autoCardStyles = StyleSheet.create({
+  container: {
+    backgroundColor: "#EFF6FF",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1D4ED8",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  timer: {
+    fontSize: 48,
+    fontWeight: "700",
+    color: "#2563EB",
+    fontVariant: ["tabular-nums"],
+    marginBottom: 16,
+  },
+  stopButton: {
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+  },
+  stopButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+});
+
+// ---------------------------------------------------------------------------
+// AutoRestCard sub-component
+// ---------------------------------------------------------------------------
+
+interface AutoRestCardProps {
+  remaining: number; // ms
+  label: string;
+  onSkip: () => void;
+}
+
+const AutoRestCard: FC<AutoRestCardProps> = ({ remaining, label, onSkip }) => (
+  <View style={autoRestStyles.container}>
+    <Text style={autoRestStyles.sectionLabel}>{label}</Text>
+    <Text
+      style={autoRestStyles.time}
+      accessibilityLabel={`Rest time remaining ${formatCountdown(remaining)}`}
+    >
+      {formatCountdown(remaining)}
+    </Text>
+    <Pressable
+      style={autoRestStyles.skipButton}
+      onPress={onSkip}
+      accessibilityLabel="Skip rest period"
+    >
+      <Text style={autoRestStyles.skipButtonText}>Skip Rest</Text>
+    </Pressable>
+  </View>
+);
+
+const autoRestStyles = StyleSheet.create({
+  container: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#92400E",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  time: {
+    fontSize: 48,
+    fontWeight: "700",
+    color: "#D97706",
+    fontVariant: ["tabular-nums"],
+    marginBottom: 16,
+  },
+  skipButton: {
+    borderWidth: 1,
+    borderColor: "#D97706",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+  },
+  skipButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#D97706",
+  },
+});
+
+// ---------------------------------------------------------------------------
+// AutoModeContent sub-component
+// ---------------------------------------------------------------------------
+
+interface AutoModeContentProps {
+  autoTimerConfig: AutoTimerConfig | null;
+  workoutId: string;
+  sortedExercises: import("../types").WorkoutExercise[];
+  sessionVm: ReturnType<typeof useSessionViewModel>;
+  sounds: ReturnType<typeof useWorkoutSound>;
+  getExerciseName: (exerciseId: string) => string;
+}
+
+const AutoModeContent: FC<AutoModeContentProps> = ({
+  autoTimerConfig,
+  workoutId,
+  sortedExercises,
+  sessionVm,
+  sounds,
+  getExerciseName,
+}) => {
+  const handleSetComplete = (
+    exerciseId: string,
+    setNumber: number,
+    reps: number,
+    weightKg?: number
+  ) => {
+    sessionVm.logSet({ exerciseId, setNumber, reps, weightKg });
+  };
+
+  const handleSessionComplete = () => {
+    // Session continues — user still needs to tap Complete Workout
+  };
+
+  const noConfig = autoTimerConfig === null;
+
+  // We always call useAutoSession to satisfy Rules of Hooks.
+  // Use a fallback config when not configured.
+  const effectiveConfig: AutoTimerConfig = autoTimerConfig ?? {
+    secondsPerSet: 45,
+    restBetweenSetsSecs: 60,
+    restBetweenExercisesSecs: 90,
+  };
+
+  const autoSession = useAutoSession(
+    {
+      exercises: sortedExercises,
+      autoTimerConfig: effectiveConfig,
+      onSetComplete: handleSetComplete,
+      onSessionComplete: handleSessionComplete,
+    },
+    sounds
+  );
+
+  if (noConfig) {
+    return (
+      <Pressable
+        style={autoStyles.warningBanner}
+        onPress={() =>
+          router.push({
+            pathname: "/workouts/[id]/timer-config",
+            params: { id: workoutId },
+          })
+        }
+        accessibilityLabel="Auto timer not configured — tap to set it up"
+      >
+        <Text style={autoStyles.warningBannerText}>
+          Auto timer not configured — tap here to set it up
+        </Text>
+      </Pressable>
+    );
+  }
+
+  const currentEx = sortedExercises[autoSession.currentExerciseIndex];
+  const exerciseName = currentEx !== undefined
+    ? getExerciseName(currentEx.exerciseId)
+    : "Exercise";
+
+  if (autoSession.phase === "IDLE") {
+    const handleStart = () => {
+      sounds.unlockAudio(); // unlock Web Audio API before first beep
+      autoSession.start();
+    };
+    return (
+      <Pressable
+        style={autoStyles.startButton}
+        onPress={handleStart}
+        accessibilityLabel="Start auto session"
+      >
+        <Text style={autoStyles.startButtonText}>Start Auto Session</Text>
+      </Pressable>
+    );
+  }
+
+  if (autoSession.phase === "GRACE") {
+    return (
+      <GracePeriodOverlay
+        remaining={autoSession.graceRemaining}
+        exerciseName={exerciseName}
+        setNumber={autoSession.currentSetNumber}
+        onSkip={autoSession.skipGrace}
+      />
+    );
+  }
+
+  if (autoSession.phase === "RUNNING") {
+    return (
+      <AutoRunningCard
+        remaining={autoSession.setRemaining}
+        onStopEarly={autoSession.stopEarly}
+      />
+    );
+  }
+
+  if (autoSession.phase === "SET_REST") {
+    return (
+      <AutoRestCard
+        remaining={autoSession.restRemaining}
+        label="Rest Between Sets"
+        onSkip={autoSession.skipRest}
+      />
+    );
+  }
+
+  if (autoSession.phase === "EXERCISE_REST") {
+    return (
+      <AutoRestCard
+        remaining={autoSession.restRemaining}
+        label="Rest Between Exercises"
+        onSkip={autoSession.skipRest}
+      />
+    );
+  }
+
+  if (autoSession.phase === "DONE") {
+    return (
+      <View style={autoStyles.doneCard}>
+        <Text style={autoStyles.doneText}>All sets complete!</Text>
+        <Text style={autoStyles.doneSubtext}>
+          Tap Complete Workout to finish.
+        </Text>
+      </View>
+    );
+  }
+
+  return null;
+};
+
+const autoStyles = StyleSheet.create({
+  warningBanner: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  warningBannerText: {
+    fontSize: 14,
+    color: "#92400E",
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  startButton: {
+    backgroundColor: "#2563EB",
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  startButtonText: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  doneCard: {
+    backgroundColor: "#D1FAE5",
+    borderRadius: 12,
+    padding: 24,
+    marginBottom: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#6EE7B7",
+  },
+  doneText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#065F46",
+    marginBottom: 6,
+  },
+  doneSubtext: {
+    fontSize: 14,
+    color: "#047857",
+  },
+});
+
+// ---------------------------------------------------------------------------
 // ActiveSessionScreen
 // ---------------------------------------------------------------------------
 
 const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   const sessionVm = useSessionViewModel();
   const workoutVm = useWorkoutViewModel();
+  const sounds = useWorkoutSound();
 
-  // Per-exercise navigation state.
+  // Per-exercise navigation state (manual mode).
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
   const [currentSetNumber, setCurrentSetNumber] = useState<number>(1);
   const [isResting, setIsResting] = useState<boolean>(false);
@@ -135,16 +469,25 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   const [isSetPaused, setIsSetPaused] = useState<boolean>(false);
   const [nextExerciseWarning, setNextExerciseWarning] = useState<boolean>(false);
 
-  // Total session stopwatch — auto-starts on mount.
   const sessionStopwatch = useStopwatch();
   const setStopwatch = useStopwatch();
+  const manualGrace = useCountdown(GRACE_PERIOD_MS);
+  const [isManualGrace, setIsManualGrace] = useState<boolean>(false);
 
-  // Auto-start session stopwatch.
   useEffect(() => {
     sessionStopwatch.start();
-    // Only on mount; sessionStopwatch is stable across renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (manualGrace.isDone && isManualGrace) {
+      setIsManualGrace(false);
+      sounds.playSetStart();
+      setSetStarted(true);
+      setIsSetPaused(false);
+      setStopwatch.start();
+    }
+  }, [manualGrace.isDone, isManualGrace]);
 
   const activeSession = sessionVm.activeSession;
 
@@ -190,21 +533,47 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
 
   const sortedExercises = [...workout.exercises].sort((a, b) => a.order - b.order);
   const totalExercises = sortedExercises.length;
+
+  const autoMode = sessionVm.autoMode;
+  const autoTimerConfig = sessionVm.autoTimerConfig;
+
+  // Auto mode toggle disabled while a set is in progress (manual) or auto
+  // session is running.
+  const toggleDisabled = setStarted;
+
+  const handleToggleAutoMode = (value: boolean) => {
+    sessionVm.setAutoMode(value);
+  };
+
+  // Manual mode derived values
   const currentWorkoutExercise = sortedExercises[currentExerciseIndex];
   const exercise = workoutVm.getExerciseById(currentWorkoutExercise.exerciseId);
   const exerciseName = exercise?.name ?? "Unknown Exercise";
   const muscleGroup: ExerciseGroup = exercise?.muscleGroup ?? "UPPER_BODY";
   const badgeConfig = GROUP_BADGE_CONFIG[muscleGroup];
-
   const totalSets = currentWorkoutExercise.sets;
   const restSeconds = currentWorkoutExercise.restSeconds ?? 0;
   const isLastExercise = currentExerciseIndex === totalExercises - 1;
+  const allSetsDone = currentSetNumber > totalSets;
+
+  const getExerciseName = (exerciseId: string): string =>
+    workoutVm.getExerciseById(exerciseId)?.name ?? "Exercise";
 
   // -------------------------------------------------------------------------
-  // Handlers
+  // Manual handlers
   // -------------------------------------------------------------------------
 
   const handleStartSet = () => {
+    sounds.unlockAudio();
+    manualGrace.reset(GRACE_PERIOD_MS);
+    setIsManualGrace(true);
+    setTimeout(() => manualGrace.start(), 0);
+  };
+
+  const handleManualSkipGrace = () => {
+    manualGrace.reset();
+    setIsManualGrace(false);
+    sounds.playSetStart();
     setSetStarted(true);
     setIsSetPaused(false);
     setStopwatch.start();
@@ -256,15 +625,12 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   };
 
   const handleNextExercise = () => {
-    const allSetsDone = currentSetNumber > totalSets;
     if (!allSetsDone) {
       setNextExerciseWarning(true);
       return;
     }
     setNextExerciseWarning(false);
-    if (isLastExercise) {
-      return;
-    }
+    if (isLastExercise) return;
     setCurrentExerciseIndex((prev) => prev + 1);
     setCurrentSetNumber(1);
     setSetStarted(false);
@@ -287,21 +653,26 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   // Render
   // -------------------------------------------------------------------------
 
-  const allSetsDone = currentSetNumber > totalSets;
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header: workout name + total elapsed */}
+        {/* Header: workout name + total elapsed + auto toggle */}
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
             <Text style={styles.workoutName} numberOfLines={1}>
               {workout.name}
             </Text>
             <Text style={styles.headerSubtitle}>Active Session</Text>
+            <View style={styles.toggleRow}>
+              <AutoModeToggle
+                isAuto={autoMode}
+                onToggle={handleToggleAutoMode}
+                disabled={toggleDisabled}
+              />
+            </View>
           </View>
           <Text
             style={styles.totalElapsed}
@@ -311,33 +682,63 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
           </Text>
         </View>
 
-        {/* Exercise progress card */}
+        {/* Exercise progress card (shown in both modes) */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>Exercise Progress</Text>
-          <Text style={styles.exerciseProgress}>
-            Exercise {currentExerciseIndex + 1} of {totalExercises}
-          </Text>
-          <View style={styles.exerciseNameRow}>
-            <Text style={styles.exerciseName}>{exerciseName}</Text>
-            <View
-              style={[
-                styles.groupBadge,
-                { backgroundColor: badgeConfig.background },
-              ]}
-            >
-              <Text style={[styles.groupBadgeText, { color: badgeConfig.text }]}>
-                {badgeConfig.label}
+          {autoMode ? (
+            <Text style={styles.exerciseProgress}>
+              Auto mode active · {totalExercises} exercise{totalExercises !== 1 ? "s" : ""}
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.exerciseProgress}>
+                Exercise {currentExerciseIndex + 1} of {totalExercises}
               </Text>
-            </View>
-          </View>
-          <Text style={styles.setProgress}>
-            Set {Math.min(currentSetNumber, totalSets)} of {totalSets}
-            {allSetsDone ? " (all sets done)" : ""}
-          </Text>
+              <View style={styles.exerciseNameRow}>
+                <Text style={styles.exerciseName}>{exerciseName}</Text>
+                <View
+                  style={[
+                    styles.groupBadge,
+                    { backgroundColor: badgeConfig.background },
+                  ]}
+                >
+                  <Text style={[styles.groupBadgeText, { color: badgeConfig.text }]}>
+                    {badgeConfig.label}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.setProgress}>
+                Set {Math.min(currentSetNumber, totalSets)} of {totalSets}
+                {allSetsDone ? " (all sets done)" : ""}
+              </Text>
+            </>
+          )}
         </View>
 
-        {/* Set timer card */}
-        {!isResting && (
+        {/* Auto mode content */}
+        {autoMode && (
+          <AutoModeContent
+            autoTimerConfig={autoTimerConfig}
+            workoutId={workout.id}
+            sortedExercises={sortedExercises}
+            sessionVm={sessionVm}
+            sounds={sounds}
+            getExerciseName={getExerciseName}
+          />
+        )}
+
+        {/* Manual mode: grace period overlay */}
+        {!autoMode && !isResting && isManualGrace && (
+          <GracePeriodOverlay
+            remaining={manualGrace.remaining}
+            exerciseName={exerciseName}
+            setNumber={currentSetNumber}
+            onSkip={handleManualSkipGrace}
+          />
+        )}
+
+        {/* Manual mode: set timer card */}
+        {!autoMode && !isResting && !isManualGrace && (
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Set Timer</Text>
             <Text
@@ -363,12 +764,16 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
                 </Pressable>
                 {setStarted && (
                   <Pressable
-                    style={[styles.setButton, styles.setButtonPause, isSetPaused && styles.setButtonResume]}
+                    style={[
+                      styles.setButton,
+                      styles.setButtonPause,
+                      isSetPaused && styles.setButtonResume,
+                    ]}
                     onPress={isSetPaused ? handleResumeSet : handlePauseSet}
                     accessibilityLabel={isSetPaused ? "Resume set timer" : "Pause set timer"}
                   >
                     <Text style={styles.setButtonText}>
-                      {isSetPaused ? "▶ Resume" : "⏸ Pause"}
+                      {isSetPaused ? "Resume" : "Pause"}
                     </Text>
                   </Pressable>
                 )}
@@ -377,8 +782,8 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
           </View>
         )}
 
-        {/* Rest timer */}
-        {isResting && restSeconds > 0 && (
+        {/* Manual mode: rest timer */}
+        {!autoMode && isResting && restSeconds > 0 && (
           <RestTimer
             restMs={restSeconds * 1000}
             onDone={handleRestDone}
@@ -386,52 +791,58 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
           />
         )}
 
-        {/* Navigation */}
-        <View style={styles.navRow}>
-          <Pressable
-            style={[
-              styles.navButton,
-              currentExerciseIndex === 0 && styles.navButtonDisabled,
-            ]}
-            onPress={handlePrevExercise}
-            disabled={currentExerciseIndex === 0}
-            accessibilityLabel="Go to previous exercise"
-          >
-            <Text
-              style={[
-                styles.navButtonText,
-                currentExerciseIndex === 0 && styles.navButtonTextDisabled,
-              ]}
-            >
-              ← Prev
-            </Text>
-          </Pressable>
+        {/* Manual mode: navigation */}
+        {!autoMode && (
+          <>
+            <View style={styles.navRow}>
+              <Pressable
+                style={[
+                  styles.navButton,
+                  currentExerciseIndex === 0 && styles.navButtonDisabled,
+                ]}
+                onPress={handlePrevExercise}
+                disabled={currentExerciseIndex === 0}
+                accessibilityLabel="Go to previous exercise"
+              >
+                <Text
+                  style={[
+                    styles.navButtonText,
+                    currentExerciseIndex === 0 && styles.navButtonTextDisabled,
+                  ]}
+                >
+                  Prev
+                </Text>
+              </Pressable>
 
-          <Pressable
-            style={[
-              styles.navButton,
-              isLastExercise && allSetsDone && styles.navButtonDisabled,
-            ]}
-            onPress={handleNextExercise}
-            disabled={isLastExercise && allSetsDone}
-            accessibilityLabel={isLastExercise ? "Finish exercises" : "Go to next exercise"}
-          >
-            <Text
-              style={[
-                styles.navButtonText,
-                isLastExercise && allSetsDone && styles.navButtonTextDisabled,
-              ]}
-            >
-              {isLastExercise ? "Finish Exercises" : "Next →"}
-            </Text>
-          </Pressable>
-        </View>
+              <Pressable
+                style={[
+                  styles.navButton,
+                  isLastExercise && allSetsDone && styles.navButtonDisabled,
+                ]}
+                onPress={handleNextExercise}
+                disabled={isLastExercise && allSetsDone}
+                accessibilityLabel={
+                  isLastExercise ? "Finish exercises" : "Go to next exercise"
+                }
+              >
+                <Text
+                  style={[
+                    styles.navButtonText,
+                    isLastExercise && allSetsDone && styles.navButtonTextDisabled,
+                  ]}
+                >
+                  {isLastExercise ? "Finish Exercises" : "Next"}
+                </Text>
+              </Pressable>
+            </View>
 
-        {nextExerciseWarning && (
-          <Text style={styles.warningText}>Complete all sets first</Text>
+            {nextExerciseWarning && (
+              <Text style={styles.warningText}>Complete all sets first</Text>
+            )}
+          </>
         )}
 
-        {/* Complete / Abandon */}
+        {/* Complete / Abandon (always visible) */}
         <View style={styles.finalRow}>
           <Pressable
             style={[styles.button, styles.buttonComplete]}
@@ -514,6 +925,9 @@ const styles = StyleSheet.create({
     color: "#6B6B6B",
     marginTop: 2,
   },
+  toggleRow: {
+    marginTop: 8,
+  },
   totalElapsed: {
     fontSize: 36,
     fontWeight: "700",
@@ -526,7 +940,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
     elevation: 2,
   },
   cardLabel: {
@@ -569,7 +982,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B6B6B",
   },
-  // ---- Set timer ----
+  // ---- Set timer (manual) ----
   setTimerText: {
     fontSize: 48,
     fontWeight: "700",
@@ -609,7 +1022,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
   },
-  // ---- Navigation row ----
+  // ---- Navigation row (manual) ----
   navRow: {
     flexDirection: "row",
     gap: 12,
@@ -623,7 +1036,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
     elevation: 1,
   },
   navButtonDisabled: {

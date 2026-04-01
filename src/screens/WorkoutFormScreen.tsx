@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { z } from "zod";
-import { useWorkoutViewModel } from "../hooks/useWorkoutViewModel";
+import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 
 // ---------------------------------------------------------------------------
 // Validation schema

@@ -38,12 +38,10 @@ export function useCountdown(initialMs: number): CountdownState {
     setIsDone(false);
     setIsRunning((prev) => {
       if (prev) return prev;
-      // Snapshot current remaining so the interval can compute from it.
-      remainingAtSegmentStartRef.current = remaining;
       segmentStartRef.current = Date.now();
       return true;
     });
-  }, [remaining]);
+  }, []);
 
   const pause = useCallback(() => {
     setIsRunning((prev) => {

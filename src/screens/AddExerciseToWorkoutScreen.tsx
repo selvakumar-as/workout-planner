@@ -11,7 +11,7 @@ import {
 import { z } from "zod";
 import RestTimerInput from "../components/RestTimerInput";
 import SetRepInput from "../components/SetRepInput";
-import { useWorkoutViewModel } from "../hooks/useWorkoutViewModel";
+import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import type { Exercise, ExerciseGroup } from "../types";
 
 // ---------------------------------------------------------------------------

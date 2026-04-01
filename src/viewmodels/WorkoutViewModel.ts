@@ -1,5 +1,6 @@
 import { workoutStoreApi } from "../store/workoutStore";
 import type {
+  AutoTimerConfig,
   Equipment,
   Exercise,
   ExerciseGroup,
@@ -74,5 +75,9 @@ export class WorkoutViewModel {
 
   removeExerciseFromWorkout(workoutId: string, exerciseId: string): void {
     workoutStoreApi.getState().removeExerciseFromWorkout(workoutId, exerciseId);
+  }
+
+  updateWorkoutTimerConfig(workoutId: string, config: AutoTimerConfig | undefined): void {
+    workoutStoreApi.getState().updateWorkout(workoutId, { autoTimerConfig: config });
   }
 }

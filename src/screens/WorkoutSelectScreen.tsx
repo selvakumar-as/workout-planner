@@ -8,8 +8,8 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import { useWorkoutViewModel } from "../hooks/useWorkoutViewModel";
-import { useSessionViewModel } from "../hooks/useSessionViewModel";
+import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
+import { useSessionViewModel } from "../viewmodels/useSessionViewModel";
 import type { Workout } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -58,7 +58,10 @@ const WorkoutSelectScreen: FC<WorkoutSelectScreenProps> = () => {
   const sessionVm = useSessionViewModel();
 
   const handleSelectWorkout = (workoutId: string) => {
-    sessionVm.startSession(workoutId);
+    const workout = workoutVm.getWorkoutById(workoutId);
+    sessionVm.startSession(workoutId, {
+      autoTimerConfig: workout?.autoTimerConfig,
+    });
     router.replace("/session");
   };
 
