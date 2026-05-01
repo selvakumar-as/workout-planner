@@ -17,9 +17,12 @@ export const SessionSetSchema = z.object({
   id:          z.uuid(),
   exerciseId:  z.uuid(),
   setNumber:   z.number().int().positive(),    // 1-indexed (Set 1, Set 2...)
-  reps:        z.number().int().nonnegative(), // 0 allowed for failed sets
-  weightKg:    z.number().nonnegative().optional(),
-  completedAt: z.iso.datetime(),
+  reps:          z.number().int().nonnegative(), // 0 allowed for failed sets
+  weightKg:      z.number().nonnegative().optional(),
+  completedAt:   z.iso.datetime(),
+  startedAt:     z.string().optional(),
+  durationSecs:  z.number().nonnegative().optional(),
+  caloriesBurnt: z.number().nonnegative().optional(),
 });
 export type SessionSet = z.infer<typeof SessionSetSchema>;
 

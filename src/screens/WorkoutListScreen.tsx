@@ -3,11 +3,11 @@ import React, { FC } from "react";
 import {
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import type { Workout } from "../types";
 
@@ -68,7 +68,7 @@ const WorkoutListScreen: FC<WorkoutListScreenProps> = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <FlatList<Workout>
         data={vm.workouts}
         keyExtractor={(item) => item.id}

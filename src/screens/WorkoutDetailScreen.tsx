@@ -2,12 +2,12 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { FC } from "react";
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import type { Exercise, ExerciseGroup, WorkoutExercise } from "../types";
 
@@ -36,27 +36,30 @@ export interface WorkoutDetailScreenProps {}
 export interface ExerciseRowProps {
   entry: WorkoutExercise;
   exercise: Exercise;
+  onEdit: (exerciseId: string) => void;
 }
 
 // ---------------------------------------------------------------------------
 // ExerciseRow
 // ---------------------------------------------------------------------------
 
-const ExerciseRow: FC<ExerciseRowProps> = ({ entry, exercise }) => {
-  const weightText =
-    entry.weightKg !== undefined ? ` · ${entry.weightKg} kg` : "";
-  const restText =
-    entry.restSeconds !== undefined ? ` · ${entry.restSeconds}s rest` : "";
-
+const ExerciseRow: FC<ExerciseRowProps> = ({ entry, exercise, onEdit }) => {
+  const weightText = entry.weightKg !== undefined ? ` · ${entry.weightKg} kg` : "";
+  const restText = entry.restSeconds !== undefined ? ` · ${entry.restSeconds}s rest` : "";
   return (
-    <View style={styles.exerciseRow}>
-      <Text style={styles.exerciseName}>{exercise.name}</Text>
-      <Text style={styles.exerciseMeta}>
-        {entry.sets} × {entry.reps}
-        {weightText}
-        {restText}
-      </Text>
-    </View>
+    <Pressable
+      style={styles.exerciseRow}
+      onPress={() => onEdit(entry.exerciseId)}
+      accessibilityLabel={`Edit exercise ${exercise.name}`}
+    >
+      <View style={styles.exerciseRowContent}>
+        <Text style={styles.exerciseName}>{exercise.name}</Text>
+        <Text style={styles.exerciseMeta}>
+          {entry.sets} × {entry.reps}{weightText}{restText}
+        </Text>
+      </View>
+      <Text style={styles.exerciseEditHint}>›</Text>
+    </Pressable>
   );
 };
 
@@ -72,7 +75,7 @@ const WorkoutDetailScreen: FC<WorkoutDetailScreenProps> = () => {
 
   if (!workout) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <View style={styles.notFoundContainer}>
           <Text style={styles.notFoundText}>Workout not found.</Text>
           <Pressable
@@ -120,9 +123,16 @@ const WorkoutDetailScreen: FC<WorkoutDetailScreenProps> = () => {
     });
   };
 
+  const handleEditExercise = (exerciseId: string) => {
+    router.push({
+      pathname: "/workouts/[id]/add-exercise",
+      params: { id: workoutId, exerciseId },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* Workout header */}
         <View style={styles.header}>
           <Text style={styles.title}>{workout.name}</Text>
@@ -150,6 +160,7 @@ const WorkoutDetailScreen: FC<WorkoutDetailScreenProps> = () => {
                     key={entry.exerciseId}
                     entry={entry}
                     exercise={exercise}
+                    onEdit={handleEditExercise}
                   />
                 );
               })}
@@ -204,6 +215,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F5F5F5",
   },
+  scroll: {
+    flex: 1,
+  },
   scrollContent: {
     paddingBottom: 40,
   },
@@ -245,6 +259,8 @@ const styles = StyleSheet.create({
     boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
     elevation: 1,
   },
+  exerciseRowContent: { flex: 1 },
+  exerciseEditHint: { fontSize: 22, color: "#9CA3AF", marginLeft: 8 },
   exerciseName: {
     fontSize: 15,
     fontWeight: "600",

@@ -63,6 +63,15 @@ export function useAutoSession(
   const setNumberRef = useRef(1);
   const phaseRef = useRef<AutoPhase>("IDLE");
 
+  // Edge-detection refs: each tracks whether the current isDone=true event for
+  // that timer has already been handled.  The ref is reset to false only when
+  // isDone goes back to false (timer reset), never inside the start* helpers.
+  // This prevents effects from double-firing when non-isDone deps (callback
+  // references) change while isDone is still stale-true from a prior phase.
+  const graceCompletedRef = useRef(false);
+  const setTimerCompletedRef = useRef(false);
+  const restCompletedRef = useRef(false);
+
   const setExerciseIndex = useCallback((idx: number) => {
     exerciseIndexRef.current = idx;
     setCurrentExerciseIndexState(idx);
@@ -163,26 +172,37 @@ export function useAutoSession(
   ]);
 
   // ------------------------------------------------------------------
-  // Countdown completion effects
+  // Countdown completion effects — edge-triggered via *CompletedRef
   // ------------------------------------------------------------------
 
+  // grace: fires only on the first false→true transition after each reset()
   useEffect(() => {
-    if (grace.isDone && phaseRef.current === "GRACE") {
+    if (!grace.isDone) { graceCompletedRef.current = false; return; }
+    if (graceCompletedRef.current) return;
+    graceCompletedRef.current = true;
+    if (phaseRef.current === "GRACE") {
       startSet();
     }
   }, [grace.isDone, startSet]);
 
+  // setTimer: fires only on the first false→true transition after each reset()
   useEffect(() => {
-    if (setTimer.isDone && phaseRef.current === "RUNNING") {
+    if (!setTimer.isDone) { setTimerCompletedRef.current = false; return; }
+    if (setTimerCompletedRef.current) return;
+    setTimerCompletedRef.current = true;
+    if (phaseRef.current === "RUNNING") {
       handleSetComplete();
     }
   }, [setTimer.isDone, handleSetComplete]);
 
+  // restTimer: fires only on the first false→true transition after each reset()
   useEffect(() => {
-    if (restTimer.isDone && phaseRef.current === "SET_REST") {
+    if (!restTimer.isDone) { restCompletedRef.current = false; return; }
+    if (restCompletedRef.current) return;
+    restCompletedRef.current = true;
+    if (phaseRef.current === "SET_REST") {
       startGrace();
-    }
-    if (restTimer.isDone && phaseRef.current === "EXERCISE_REST") {
+    } else if (phaseRef.current === "EXERCISE_REST") {
       const nextIdx = exerciseIndexRef.current + 1;
       setExerciseIndex(nextIdx);
       setSetNumber(1);
@@ -204,15 +224,18 @@ export function useAutoSession(
 
   const skipGrace = useCallback(() => {
     if (phaseRef.current !== "GRACE") return;
+    graceCompletedRef.current = true; // mark handled so effect doesn't also fire
     grace.reset(0);
     startSet();
   }, [grace, startSet]);
 
   const skipRest = useCallback(() => {
     if (phaseRef.current === "SET_REST") {
+      restCompletedRef.current = true; // mark handled so effect doesn't also fire
       restTimer.reset(0);
       startGrace();
     } else if (phaseRef.current === "EXERCISE_REST") {
+      restCompletedRef.current = true; // mark handled so effect doesn't also fire
       restTimer.reset(0);
       const nextIdx = exerciseIndexRef.current + 1;
       setExerciseIndex(nextIdx);
@@ -224,6 +247,7 @@ export function useAutoSession(
 
   const stopEarly = useCallback(() => {
     if (phaseRef.current !== "RUNNING") return;
+    setTimerCompletedRef.current = true; // mark handled so effect doesn't also fire
     setTimer.reset(0);
     handleSetComplete();
   }, [setTimer, handleSetComplete]);

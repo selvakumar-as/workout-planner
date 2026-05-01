@@ -2,11 +2,11 @@ import React, { FC } from "react";
 import {
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import { useSessionViewModel } from "../viewmodels/useSessionViewModel";
@@ -66,7 +66,7 @@ const WorkoutSelectScreen: FC<WorkoutSelectScreenProps> = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>Select Workout</Text>
         <Text style={styles.subtitle}>Choose a workout to start your session</Text>

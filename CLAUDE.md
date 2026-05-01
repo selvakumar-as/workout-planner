@@ -4,7 +4,7 @@
 
 ## Project
 React Native + Expo app. TypeScript strict mode. MVVM pattern using Zustand.
-Expo Router for navigation. MMKV for persistence. Zod for runtime validation.
+Expo Router for navigation. Uses https://docs.maestro.dev/get-started/supported-platform/react-native for integration testing
 
 ## Conventions
 - ViewModels live in src/viewmodels/ and are plain TypeScript classes
@@ -55,11 +55,9 @@ npx tsc --noEmit
 | Framework | Expo ~54 / React Native 0.81 |
 | Routing | expo-router (file-based, like Next.js App Router) |
 | Client state | Zustand |
-| Server state / caching | TanStack Query (React Query v5) |
-| Validation | Zod |
-| Local storage | MMKV |
+| Local storage | react-native-mmkv-storage |
 | Testing | Jest + React Native Testing Library |
-
+| integration or scenario testing via maestro |https://maestro.dev/ | https://docs.maestro.dev/get-started/supported-platform/react-native
 ### Routing
 
 The app uses **expo-router** with a file-based `app/` directory. Routes map directly to file paths (e.g., `app/index.tsx` → `/`, `app/workouts/[id].tsx` → `/workouts/:id`). Layouts are defined in `_layout.tsx` files. The root entry is `index.ts` → `App.tsx`, but as the app grows, routing will live entirely in `app/`.
@@ -68,8 +66,7 @@ The app uses **expo-router** with a file-based `app/` directory. Routes map dire
 
 - **Zustand** for local/UI state (e.g., active workout session, UI toggles)
 - **TanStack Query** for remote data fetching, caching, and synchronization
-- **MMKV** for persistent local storage (fast, synchronous, encrypted)
-- **Zod** for validating API responses and form inputs at runtime
+- **react-native-mmkv-storage** for persistent local storage (fast, synchronous, encrypted)
 
 ### React Native New Architecture
 

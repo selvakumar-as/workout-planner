@@ -2,13 +2,13 @@ import { router } from "expo-router";
 import React, { FC, useState } from "react";
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 
@@ -81,8 +81,9 @@ const WorkoutFormScreen: FC<WorkoutFormScreenProps> = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
@@ -147,6 +148,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F5F5F5",
+  },
+  scroll: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,

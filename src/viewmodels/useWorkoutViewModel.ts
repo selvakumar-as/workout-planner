@@ -15,7 +15,16 @@ export function useWorkoutViewModel() {
   const addExerciseAction = useWorkoutStore((s) => s.addExercise);
   const addExerciseToWorkoutAction = useWorkoutStore((s) => s.addExerciseToWorkout);
   const removeExerciseFromWorkoutAction = useWorkoutStore((s) => s.removeExerciseFromWorkout);
+  const updateWorkoutExerciseAction = useWorkoutStore((s) => s.updateWorkoutExercise);
   const updateWorkoutAction = useWorkoutStore((s) => s.updateWorkout);
+  const toggleFavouriteAction = useWorkoutStore((s) => s.toggleFavourite);
+
+  const sortedExercises = [...exercises].sort((a, b) => {
+    const aFav = a.isFavourite ?? false;
+    const bFav = b.isFavourite ?? false;
+    if (aFav !== bFav) return aFav ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 
   const getWorkoutById = (id: string): Workout | undefined =>
     workouts.find((w) => w.id === id);
@@ -24,7 +33,7 @@ export function useWorkoutViewModel() {
     exercises.find((e) => e.id === id);
 
   const getExercisesByGroup = (group: ExerciseGroup): Exercise[] =>
-    exercises.filter((e) => e.muscleGroup === group);
+    sortedExercises.filter((e) => e.muscleGroup === group);
 
   const addWorkout = (name: string, description?: string): void => {
     addWorkoutAction({ name, description, exercises: [] });
@@ -49,6 +58,14 @@ export function useWorkoutViewModel() {
     removeExerciseFromWorkoutAction(workoutId, exerciseId);
   };
 
+  const updateWorkoutExercise = (
+    workoutId: string,
+    exerciseId: string,
+    patch: Partial<Pick<WorkoutExercise, 'sets' | 'reps' | 'weightKg' | 'restSeconds'>>
+  ): void => {
+    updateWorkoutExerciseAction(workoutId, exerciseId, patch);
+  };
+
   const updateWorkoutTimerConfig = (
     workoutId: string,
     config: AutoTimerConfig | undefined
@@ -56,10 +73,14 @@ export function useWorkoutViewModel() {
     updateWorkoutAction(workoutId, { autoTimerConfig: config });
   };
 
+  const toggleFavourite = (exerciseId: string): void => {
+    toggleFavouriteAction(exerciseId);
+  };
+
   return {
     // Data
     workouts,
-    exercises,
+    exercises: sortedExercises,
     // Handlers
     getWorkoutById,
     getExerciseById,
@@ -68,6 +89,8 @@ export function useWorkoutViewModel() {
     addExercise,
     addExerciseToWorkout,
     removeExerciseFromWorkout,
+    updateWorkoutExercise,
     updateWorkoutTimerConfig,
+    toggleFavourite,
   };
 }

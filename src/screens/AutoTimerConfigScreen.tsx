@@ -4,13 +4,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import { AutoTimerConfigSchema } from "../types";
 
@@ -37,6 +37,15 @@ const AutoTimerConfigScreen: FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSave = () => {
+    const preErrors: Record<string, string> = {};
+    if (secondsPerSet.trim() === '') preErrors.secondsPerSet = 'Must be a positive number';
+    if (restBetweenSets.trim() === '') preErrors.restBetweenSetsSecs = 'Must not be empty';
+    if (restBetweenExercises.trim() === '') preErrors.restBetweenExercisesSecs = 'Must not be empty';
+    if (Object.keys(preErrors).length > 0) {
+      setErrors(preErrors);
+      return;
+    }
+
     const raw = {
       secondsPerSet: Number(secondsPerSet),
       restBetweenSetsSecs: Number(restBetweenSets),
@@ -65,12 +74,12 @@ const AutoTimerConfigScreen: FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.flex}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent}>
           <Text style={styles.sectionTitle}>Auto Timer Settings</Text>
           <Text style={styles.sectionSubtitle}>
             Configure how long each set runs and how long to rest between sets
@@ -83,7 +92,7 @@ const AutoTimerConfigScreen: FC = () => {
             <TextInput
               style={[styles.input, errors.secondsPerSet !== undefined && styles.inputError]}
               value={secondsPerSet}
-              onChangeText={setSecondsPerSet}
+              onChangeText={(text) => setSecondsPerSet(text.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
               accessibilityLabel="Seconds per set"
               returnKeyType="next"
@@ -99,7 +108,7 @@ const AutoTimerConfigScreen: FC = () => {
             <TextInput
               style={[styles.input, errors.restBetweenSetsSecs !== undefined && styles.inputError]}
               value={restBetweenSets}
-              onChangeText={setRestBetweenSets}
+              onChangeText={(text) => setRestBetweenSets(text.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
               accessibilityLabel="Rest between sets in seconds"
               returnKeyType="next"
@@ -120,7 +129,7 @@ const AutoTimerConfigScreen: FC = () => {
                 errors.restBetweenExercisesSecs !== undefined && styles.inputError,
               ]}
               value={restBetweenExercises}
-              onChangeText={setRestBetweenExercises}
+              onChangeText={(text) => setRestBetweenExercises(text.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
               accessibilityLabel="Rest between exercises in seconds"
               returnKeyType="done"

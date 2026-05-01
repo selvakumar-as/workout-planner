@@ -1,12 +1,13 @@
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, useEffect, useRef, useState } from "react";
 import {
+  Image,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useSessionViewModel } from "../viewmodels/useSessionViewModel";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
@@ -15,9 +16,13 @@ import { useCountdown } from "../hooks/useCountdown";
 import { useWorkoutSound } from "../hooks/useWorkoutSound";
 import { useAutoSession, GRACE_PERIOD_MS } from "../hooks/useAutoSession";
 import { formatElapsed, formatCountdown } from "../utils/formatTime";
+import { calculateCalories } from "../utils/calorieCalculator";
+import { useUserProfileViewModel } from "../viewmodels/useUserProfileViewModel";
+import { useMetronomeTick } from "../hooks/useMetronomeTick";
 import AutoModeToggle from "../components/AutoModeToggle";
 import GracePeriodOverlay from "../components/GracePeriodOverlay";
 import type { AutoTimerConfig, ExerciseGroup } from "../types";
+import { getExerciseIcon } from "../utils/exerciseIcons";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -267,6 +272,9 @@ interface AutoModeContentProps {
   sessionVm: ReturnType<typeof useSessionViewModel>;
   sounds: ReturnType<typeof useWorkoutSound>;
   getExerciseName: (exerciseId: string) => string;
+  getExerciseMetValue: (exerciseId: string) => number;
+  userWeightKg: number;
+  onCompleteNow: () => void;
 }
 
 const AutoModeContent: FC<AutoModeContentProps> = ({
@@ -276,21 +284,14 @@ const AutoModeContent: FC<AutoModeContentProps> = ({
   sessionVm,
   sounds,
   getExerciseName,
+  getExerciseMetValue,
+  userWeightKg,
+  onCompleteNow,
 }) => {
-  const handleSetComplete = (
-    exerciseId: string,
-    setNumber: number,
-    reps: number,
-    weightKg?: number
-  ) => {
-    sessionVm.logSet({ exerciseId, setNumber, reps, weightKg });
-  };
-
-  const handleSessionComplete = () => {
-    // Session continues — user still needs to tap Complete Workout
-  };
-
   const noConfig = autoTimerConfig === null;
+
+  const [autoCompleteSecsLeft, setAutoCompleteSecsLeft] = useState<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // We always call useAutoSession to satisfy Rules of Hooks.
   // Use a fallback config when not configured.
@@ -298,6 +299,31 @@ const AutoModeContent: FC<AutoModeContentProps> = ({
     secondsPerSet: 45,
     restBetweenSetsSecs: 60,
     restBetweenExercisesSecs: 90,
+  };
+
+  const handleSetComplete = (
+    exerciseId: string,
+    setNumber: number,
+    reps: number,
+    weightKg?: number
+  ) => {
+    const metValue = getExerciseMetValue(exerciseId);
+    // use configured secondsPerSet as the set duration in auto mode
+    const durationSecs = effectiveConfig.secondsPerSet;
+    const caloriesBurnt = calculateCalories(metValue, userWeightKg, durationSecs);
+    sessionVm.logSet({
+      exerciseId,
+      setNumber,
+      reps,
+      weightKg,
+      startedAt: new Date(Date.now() - durationSecs * 1000).toISOString(),
+      durationSecs,
+      caloriesBurnt,
+    });
+  };
+
+  const handleSessionComplete = () => {
+    // Session continues — user still needs to tap Complete Workout
   };
 
   const autoSession = useAutoSession(
@@ -309,6 +335,34 @@ const AutoModeContent: FC<AutoModeContentProps> = ({
     },
     sounds
   );
+
+  useEffect(() => {
+    if (autoSession.phase === "DONE" && autoCompleteSecsLeft === null) {
+      setAutoCompleteSecsLeft(5);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSession.phase]);
+
+  useEffect(() => {
+    if (autoCompleteSecsLeft === null) return;
+    if (autoCompleteSecsLeft <= 0) {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      onCompleteNow();
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      setAutoCompleteSecsLeft((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [autoCompleteSecsLeft, onCompleteNow]);
 
   if (noConfig) {
     return (
@@ -333,6 +387,7 @@ const AutoModeContent: FC<AutoModeContentProps> = ({
   const exerciseName = currentEx !== undefined
     ? getExerciseName(currentEx.exerciseId)
     : "Exercise";
+  const currentExerciseId = currentEx?.exerciseId;
 
   if (autoSession.phase === "IDLE") {
     const handleStart = () => {
@@ -352,51 +407,120 @@ const AutoModeContent: FC<AutoModeContentProps> = ({
 
   if (autoSession.phase === "GRACE") {
     return (
-      <GracePeriodOverlay
-        remaining={autoSession.graceRemaining}
-        exerciseName={exerciseName}
-        setNumber={autoSession.currentSetNumber}
-        onSkip={autoSession.skipGrace}
-      />
+      <>
+        {currentExerciseId !== undefined && (
+          <View style={autoStyles.iconRow}>
+            <Image
+              source={getExerciseIcon(currentExerciseId)}
+              style={autoStyles.exerciseIcon}
+              accessibilityLabel={exerciseName}
+            />
+          </View>
+        )}
+        <GracePeriodOverlay
+          remaining={autoSession.graceRemaining}
+          exerciseName={exerciseName}
+          setNumber={autoSession.currentSetNumber}
+          onSkip={autoSession.skipGrace}
+        />
+      </>
     );
   }
 
   if (autoSession.phase === "RUNNING") {
     return (
-      <AutoRunningCard
-        remaining={autoSession.setRemaining}
-        onStopEarly={autoSession.stopEarly}
-      />
+      <>
+        {currentExerciseId !== undefined && (
+          <View style={autoStyles.iconRow}>
+            <Image
+              source={getExerciseIcon(currentExerciseId)}
+              style={autoStyles.exerciseIcon}
+              accessibilityLabel={exerciseName}
+            />
+          </View>
+        )}
+        <AutoRunningCard
+          remaining={autoSession.setRemaining}
+          onStopEarly={autoSession.stopEarly}
+        />
+      </>
     );
   }
 
   if (autoSession.phase === "SET_REST") {
     return (
-      <AutoRestCard
-        remaining={autoSession.restRemaining}
-        label="Rest Between Sets"
-        onSkip={autoSession.skipRest}
-      />
+      <>
+        {currentExerciseId !== undefined && (
+          <View style={autoStyles.iconRow}>
+            <Image
+              source={getExerciseIcon(currentExerciseId)}
+              style={autoStyles.exerciseIcon}
+              accessibilityLabel={exerciseName}
+            />
+          </View>
+        )}
+        <AutoRestCard
+          remaining={autoSession.restRemaining}
+          label="Rest Between Sets"
+          onSkip={autoSession.skipRest}
+        />
+      </>
     );
   }
 
   if (autoSession.phase === "EXERCISE_REST") {
     return (
-      <AutoRestCard
-        remaining={autoSession.restRemaining}
-        label="Rest Between Exercises"
-        onSkip={autoSession.skipRest}
-      />
+      <>
+        {currentExerciseId !== undefined && (
+          <View style={autoStyles.iconRow}>
+            <Image
+              source={getExerciseIcon(currentExerciseId)}
+              style={autoStyles.exerciseIcon}
+              accessibilityLabel={exerciseName}
+            />
+          </View>
+        )}
+        <AutoRestCard
+          remaining={autoSession.restRemaining}
+          label="Rest Between Exercises"
+          onSkip={autoSession.skipRest}
+        />
+      </>
     );
   }
 
   if (autoSession.phase === "DONE") {
+    const handleCompleteNow = () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      onCompleteNow();
+    };
     return (
       <View style={autoStyles.doneCard}>
+        {currentExerciseId !== undefined && (
+          <Image
+            source={getExerciseIcon(currentExerciseId)}
+            style={autoStyles.exerciseIcon}
+            accessibilityLabel={exerciseName}
+          />
+        )}
         <Text style={autoStyles.doneText}>All sets complete!</Text>
-        <Text style={autoStyles.doneSubtext}>
-          Tap Complete Workout to finish.
-        </Text>
+        {autoCompleteSecsLeft !== null ? (
+          <Text style={autoStyles.doneSubtext}>
+            Auto-closing in {autoCompleteSecsLeft}s...
+          </Text>
+        ) : (
+          <Text style={autoStyles.doneSubtext}>Tap Complete Workout to finish.</Text>
+        )}
+        <Pressable
+          style={autoStyles.completeNowButton}
+          onPress={handleCompleteNow}
+          accessibilityLabel="Complete workout now"
+        >
+          <Text style={autoStyles.completeNowButtonText}>Complete Now</Text>
+        </Pressable>
       </View>
     );
   }
@@ -450,6 +574,27 @@ const autoStyles = StyleSheet.create({
     fontSize: 14,
     color: "#047857",
   },
+  completeNowButton: {
+    marginTop: 14,
+    backgroundColor: "#059669",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+  },
+  completeNowButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  iconRow: {
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  exerciseIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -460,6 +605,7 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   const sessionVm = useSessionViewModel();
   const workoutVm = useWorkoutViewModel();
   const sounds = useWorkoutSound();
+  const { profile } = useUserProfileViewModel();
 
   // Per-exercise navigation state (manual mode).
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
@@ -473,6 +619,7 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   const setStopwatch = useStopwatch();
   const manualGrace = useCountdown(GRACE_PERIOD_MS);
   const [isManualGrace, setIsManualGrace] = useState<boolean>(false);
+  const setStartTimeRef = useRef<string>("");
 
   useEffect(() => {
     sessionStopwatch.start();
@@ -488,6 +635,30 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
       setStopwatch.start();
     }
   }, [manualGrace.isDone, isManualGrace]);
+
+  // Must be called before any early returns to satisfy Rules of Hooks.
+  const isSetRunning = setStarted && !isSetPaused && !isManualGrace && !isResting;
+  useMetronomeTick({ enabled: profile.soundEnabled, isRunning: isSetRunning, playTick: sounds.playTick });
+
+  const pendingNavigation = useRef<
+    | { type: 'summary'; id: string }
+    | { type: 'home' }
+    | null
+  >(null);
+
+  const isCompletingRef = useRef(false);
+
+  useEffect(() => {
+    if (sessionVm.activeSession !== null) return;
+    const nav = pendingNavigation.current;
+    if (nav === null) return;
+    pendingNavigation.current = null;
+    if (nav.type === 'summary') {
+      router.replace(`/session-summary?id=${nav.id}`);
+    } else {
+      router.replace('/');
+    }
+  }, [sessionVm.activeSession]);
 
   const activeSession = sessionVm.activeSession;
 
@@ -559,12 +730,18 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   const getExerciseName = (exerciseId: string): string =>
     workoutVm.getExerciseById(exerciseId)?.name ?? "Exercise";
 
+  const getExerciseMetValue = (exerciseId: string): number =>
+    workoutVm.getExerciseById(exerciseId)?.metValue ?? 3.5;
+
+  const userWeightKg = profile.weightKg ?? 75;
+
   // -------------------------------------------------------------------------
   // Manual handlers
   // -------------------------------------------------------------------------
 
   const handleStartSet = () => {
     sounds.unlockAudio();
+    setStartTimeRef.current = new Date().toISOString();
     manualGrace.reset(GRACE_PERIOD_MS);
     setIsManualGrace(true);
     setTimeout(() => manualGrace.start(), 0);
@@ -591,11 +768,19 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
 
   const handleStopAndLogSet = () => {
     setStopwatch.pause();
+    const durationSecs = Math.round(setStopwatch.elapsed / 1000);
+    const metValue = exercise?.metValue ?? 3.5;
+    const caloriesBurnt = durationSecs > 0
+      ? calculateCalories(metValue, userWeightKg, durationSecs)
+      : 0;
     sessionVm.logSet({
       exerciseId: currentWorkoutExercise.exerciseId,
       setNumber: currentSetNumber,
       reps: currentWorkoutExercise.reps,
       weightKg: currentWorkoutExercise.weightKg,
+      startedAt: setStartTimeRef.current || new Date().toISOString(),
+      durationSecs,
+      caloriesBurnt,
     });
     setSetStarted(false);
     setIsSetPaused(false);
@@ -640,13 +825,16 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   };
 
   const handleComplete = () => {
+    if (isCompletingRef.current) return;
+    isCompletingRef.current = true;
+    const sessionId = sessionVm.activeSession?.id ?? "";
+    pendingNavigation.current = { type: 'summary', id: sessionId };
     sessionVm.completeSession();
-    router.replace("/");
   };
 
   const handleAbandon = () => {
+    pendingNavigation.current = { type: 'home' };
     sessionVm.abandonSession();
-    router.replace("/");
   };
 
   // -------------------------------------------------------------------------
@@ -695,6 +883,11 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
                 Exercise {currentExerciseIndex + 1} of {totalExercises}
               </Text>
               <View style={styles.exerciseNameRow}>
+                <Image
+                  source={getExerciseIcon(currentWorkoutExercise.exerciseId)}
+                  style={styles.exerciseIcon}
+                  accessibilityLabel={exerciseName}
+                />
                 <Text style={styles.exerciseName}>{exerciseName}</Text>
                 <View
                   style={[
@@ -724,6 +917,9 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
             sessionVm={sessionVm}
             sounds={sounds}
             getExerciseName={getExerciseName}
+            getExerciseMetValue={getExerciseMetValue}
+            userWeightKg={userWeightKg}
+            onCompleteNow={handleComplete}
           />
         )}
 
@@ -981,6 +1177,11 @@ const styles = StyleSheet.create({
   setProgress: {
     fontSize: 14,
     color: "#6B6B6B",
+  },
+  exerciseIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
   },
   // ---- Set timer (manual) ----
   setTimerText: {
