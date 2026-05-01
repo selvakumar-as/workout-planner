@@ -1,18 +1,20 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { FC, useState } from "react";
 import {
+  Image,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 import RestTimerInput from "../components/RestTimerInput";
 import SetRepInput from "../components/SetRepInput";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import type { Exercise, ExerciseGroup } from "../types";
+import { getExerciseIcon } from "../utils/exerciseIcons";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -56,17 +58,26 @@ export interface AddExerciseToWorkoutScreenProps {}
 // ---------------------------------------------------------------------------
 
 const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
-  const { id: workoutId } = useLocalSearchParams<{ id: string }>();
+  const { id: workoutId, exerciseId } = useLocalSearchParams<{ id: string; exerciseId?: string }>();
+  const isEditMode = typeof exerciseId === "string" && exerciseId.length > 0;
   const vm = useWorkoutViewModel();
+  const { toggleFavourite } = vm;
+
+  const existingEntry = isEditMode
+    ? vm.getWorkoutById(workoutId)?.exercises.find((e) => e.exerciseId === exerciseId)
+    : undefined;
+  const lockedExercise = isEditMode && exerciseId !== undefined
+    ? vm.getExerciseById(exerciseId)
+    : undefined;
 
   const [filter, setFilter] = useState<FilterOption>("ALL");
-  const [selectedExerciseId, setSelectedExerciseId] = useState<
-    string | undefined
-  >(undefined);
-  const [sets, setSets] = useState<number | undefined>(undefined);
-  const [reps, setReps] = useState<number | undefined>(undefined);
-  const [weightKg, setWeightKg] = useState<number | undefined>(undefined);
-  const [restSeconds, setRestSeconds] = useState<number | undefined>(undefined);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | undefined>(
+    isEditMode ? exerciseId : undefined
+  );
+  const [sets, setSets] = useState<number | undefined>(existingEntry?.sets);
+  const [reps, setReps] = useState<number | undefined>(existingEntry?.reps);
+  const [weightKg, setWeightKg] = useState<number | undefined>(existingEntry?.weightKg);
+  const [restSeconds, setRestSeconds] = useState<number | undefined>(existingEntry?.restSeconds);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const filteredExercises: Exercise[] =
@@ -96,13 +107,22 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
     }
 
     setErrors({});
-    vm.addExerciseToWorkout(workoutId, {
-      exerciseId: result.data.exerciseId,
-      sets: result.data.sets,
-      reps: result.data.reps,
-      weightKg: result.data.weightKg,
-      restSeconds: result.data.restSeconds,
-    });
+    if (isEditMode && exerciseId !== undefined) {
+      vm.updateWorkoutExercise(workoutId, exerciseId, {
+        sets: result.data.sets,
+        reps: result.data.reps,
+        weightKg: result.data.weightKg,
+        restSeconds: result.data.restSeconds,
+      });
+    } else {
+      vm.addExerciseToWorkout(workoutId, {
+        exerciseId: result.data.exerciseId,
+        sets: result.data.sets,
+        reps: result.data.reps,
+        weightKg: result.data.weightKg,
+        restSeconds: result.data.restSeconds,
+      });
+    }
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -111,100 +131,135 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Step 1: Filter by group */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Filter by Muscle Group</Text>
-          <View style={styles.buttonRow}>
-            {FILTER_OPTIONS.map(({ key, label }) => (
-              <Pressable
-                key={key}
-                style={[
-                  styles.filterButton,
-                  filter === key && styles.filterButtonActive,
-                ]}
-                onPress={() => setFilter(key)}
-                accessibilityLabel={`Filter exercises by ${label}`}
-              >
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    filter === key && styles.filterButtonTextActive,
-                  ]}
-                >
-                  {label}
+        {isEditMode ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Exercise</Text>
+            <View style={[styles.exerciseItem, styles.exerciseItemSelected]}>
+              <View style={styles.exerciseItemContent}>
+                <Text style={[styles.exerciseName, styles.exerciseNameSelected]}>
+                  {lockedExercise?.name ?? "Unknown Exercise"}
                 </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Step 2: Exercise selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Exercise *</Text>
-          {filteredExercises.length === 0 ? (
-            <View>
-              <Text style={styles.noExercisesText}>
-                No exercises in this group.
-              </Text>
-              <Pressable
-                style={styles.addToLibraryButton}
-                onPress={() => router.push("/exercises/new")}
-                accessibilityLabel="Add exercise to library"
-              >
-                <Text style={styles.addToLibraryButtonText}>+ Add to Exercise Library</Text>
-              </Pressable>
+                <Text style={[styles.exerciseGroup, styles.exerciseGroupSelected]}>
+                  {lockedExercise !== undefined ? GROUP_LABELS[lockedExercise.muscleGroup] : ""}
+                </Text>
+              </View>
+              <Text style={styles.checkmark}>✓</Text>
             </View>
-          ) : (
-            filteredExercises.map((exercise) => {
-              const isSelected = selectedExerciseId === exercise.id;
-              return (
-                <Pressable
-                  key={exercise.id}
-                  style={[
-                    styles.exerciseItem,
-                    isSelected && styles.exerciseItemSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedExerciseId(exercise.id);
-                    if (errors.exerciseId)
-                      setErrors((prev) => ({ ...prev, exerciseId: "" }));
-                  }}
-                  accessibilityLabel={`Select exercise ${exercise.name}`}
-                >
-                  <View style={styles.exerciseItemContent}>
+          </View>
+        ) : (
+          <>
+            {/* Step 1: Filter by group */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Filter by Muscle Group</Text>
+              <View style={styles.buttonRow}>
+                {FILTER_OPTIONS.map(({ key, label }) => (
+                  <Pressable
+                    key={key}
+                    style={[
+                      styles.filterButton,
+                      filter === key && styles.filterButtonActive,
+                    ]}
+                    onPress={() => setFilter(key)}
+                    accessibilityLabel={`Filter exercises by ${label}`}
+                  >
                     <Text
                       style={[
-                        styles.exerciseName,
-                        isSelected && styles.exerciseNameSelected,
+                        styles.filterButtonText,
+                        filter === key && styles.filterButtonTextActive,
                       ]}
                     >
-                      {exercise.name}
+                      {label}
                     </Text>
-                    <Text
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Step 2: Exercise selection */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Select Exercise *</Text>
+              {filteredExercises.length === 0 ? (
+                <View>
+                  <Text style={styles.noExercisesText}>
+                    No exercises in this group.
+                  </Text>
+                  <Pressable
+                    style={styles.addToLibraryButton}
+                    onPress={() => router.push("/exercises/new")}
+                    accessibilityLabel="Add exercise to library"
+                  >
+                    <Text style={styles.addToLibraryButtonText}>+ Add to Exercise Library</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                filteredExercises.map((exercise) => {
+                  const isSelected = selectedExerciseId === exercise.id;
+                  return (
+                    <Pressable
+                      key={exercise.id}
                       style={[
-                        styles.exerciseGroup,
-                        isSelected && styles.exerciseGroupSelected,
+                        styles.exerciseItem,
+                        isSelected && styles.exerciseItemSelected,
                       ]}
+                      onPress={() => {
+                        setSelectedExerciseId(exercise.id);
+                        if (errors.exerciseId)
+                          setErrors((prev) => ({ ...prev, exerciseId: "" }));
+                      }}
+                      accessibilityLabel={`Select exercise ${exercise.name}`}
                     >
-                      {GROUP_LABELS[exercise.muscleGroup]}
-                    </Text>
-                  </View>
-                  {isSelected ? (
-                    <Text style={styles.checkmark}>✓</Text>
-                  ) : null}
-                </Pressable>
-              );
-            })
-          )}
-          {errors.exerciseId ? (
-            <Text style={styles.errorText}>{errors.exerciseId}</Text>
-          ) : null}
-        </View>
+                      <Pressable
+                        onPress={() => toggleFavourite(exercise.id)}
+                        style={styles.favouriteButton}
+                        accessibilityLabel={exercise.isFavourite ? `Remove ${exercise.name} from favourites` : `Add ${exercise.name} to favourites`}
+                        hitSlop={8}
+                      >
+                        <Text style={[styles.starIcon, exercise.isFavourite ? styles.starIconActive : undefined]}>
+                          {exercise.isFavourite ? '★' : '☆'}
+                        </Text>
+                      </Pressable>
+                      <Image
+                        source={getExerciseIcon(exercise.id)}
+                        style={styles.exerciseIcon}
+                        accessibilityLabel={exercise.name}
+                      />
+                      <View style={styles.exerciseItemContent}>
+                        <Text
+                          style={[
+                            styles.exerciseName,
+                            isSelected && styles.exerciseNameSelected,
+                          ]}
+                        >
+                          {exercise.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.exerciseGroup,
+                            isSelected && styles.exerciseGroupSelected,
+                          ]}
+                        >
+                          {GROUP_LABELS[exercise.muscleGroup]}
+                        </Text>
+                      </View>
+                      {isSelected ? (
+                        <Text style={styles.checkmark}>✓</Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })
+              )}
+              {errors.exerciseId ? (
+                <Text style={styles.errorText}>{errors.exerciseId}</Text>
+              ) : null}
+            </View>
+          </>
+        )}
 
         {/* Step 3: Set / rep / weight / rest config */}
         <View style={styles.section}>
@@ -256,9 +311,11 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
         <Pressable
           style={styles.saveButton}
           onPress={handleSave}
-          accessibilityLabel="Add exercise to workout"
+          accessibilityLabel={isEditMode ? "Save exercise changes" : "Add exercise to workout"}
         >
-          <Text style={styles.saveButtonText}>Add to Workout</Text>
+          <Text style={styles.saveButtonText}>
+            {isEditMode ? "Save Changes" : "Add to Workout"}
+          </Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -275,6 +332,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F5F5F5",
+  },
+  scroll: {
+    flex: 1,
   },
   scrollContent: {
     paddingBottom: 40,
@@ -373,6 +433,23 @@ const styles = StyleSheet.create({
     color: "#2563EB",
     fontWeight: "700",
     marginLeft: 8,
+  },
+  favouriteButton: {
+    padding: 6,
+    marginRight: 4,
+  },
+  starIcon: {
+    fontSize: 20,
+    color: '#D1D5DB',
+  },
+  starIconActive: {
+    color: '#F59E0B',
+  },
+  exerciseIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    marginRight: 10,
   },
   errorText: {
     fontSize: 12,

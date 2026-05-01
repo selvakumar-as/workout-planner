@@ -22,9 +22,11 @@ export const ExerciseSchema = z.object({
   muscleGroup:     ExerciseGroupSchema,
   description:     z.string().min(1).optional(),
   equipment:       z.array(EquipmentSchema).optional(),
+  metValue:        z.number().positive().optional(),
   defaultSets:     z.number().int().positive().optional(),
   defaultReps:     z.number().int().positive().optional(),
   defaultWeightKg: z.number().nonnegative().optional(),
+  isFavourite:     z.boolean().optional(),
   createdAt:       z.iso.datetime(),
 });
 export type Exercise = z.infer<typeof ExerciseSchema>;

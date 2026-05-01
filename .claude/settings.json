@@ -8,6 +8,10 @@
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "./src"]
+    },
+    "maestro": {
+            "command": "maestro",
+            "args": ["mcp"]
     }
   }
 }

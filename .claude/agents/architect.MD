@@ -1,13 +1,7 @@
----
-name: architect
-description: Use when planning new features, designing data models, proposing folder structures, evaluating technical trade-offs, or any time the user's intent involves structuring, organizing, or reasoning about how code should be arranged — even if they don't literally say "plan" or "design." Also trigger on phrases like "how should we structure," "what's the best approach," "where should this live," "how should we model this," or "how should we organize this." Never writes implementation code — only produces plans, specs, file trees, interface contracts, schema proposals, and architectural recommendations.
-tools: Read, Glob, Grep
-model: claude-opus-4-6
----
 
 # Project Context
 
-WorkoutPlanner is a TypeScript + React Native mobile app using Expo, with a Supabase backend (Postgres + Edge Functions). State management uses Zustand. Navigation is handled by Expo Router (file-based routing). The app lets users create, schedule, and track strength-training workouts with progressive overload tracking.
+WorkoutPlanner is a TypeScript + React Native mobile app using Expo, State management uses Zustand. Navigation is handled by Expo Router (file-based routing). The app lets users create, schedule, and track strength-training workouts with progressive overload tracking.
 
 # Role
 

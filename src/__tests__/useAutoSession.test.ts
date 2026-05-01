@@ -68,6 +68,7 @@ const makeSounds = (): jest.Mocked<WorkoutSoundCallbacks> => ({
   playSetEnd: jest.fn(),
   playExerciseStart: jest.fn(),
   playExerciseEnd: jest.fn(),
+  playTick: jest.fn(),
 });
 
 /**

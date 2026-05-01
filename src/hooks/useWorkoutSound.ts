@@ -20,6 +20,7 @@ export interface WorkoutSoundCallbacks {
   playSetEnd: () => void;
   playExerciseStart: () => void;
   playExerciseEnd: () => void;
+  playTick: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -83,8 +84,9 @@ function useWorkoutSoundWeb(): WorkoutSoundCallbacks {
   const playSetEnd       = useCallback(() => { const c = getOrCreateCtx(); if (c) playOscillator(c, 660, 120); }, [getOrCreateCtx]);
   const playExerciseStart = useCallback(() => { const c = getOrCreateCtx(); if (c) playOscillator(c, 1047, 400); }, [getOrCreateCtx]);
   const playExerciseEnd  = useCallback(() => { const c = getOrCreateCtx(); if (c) playOscillator(c, 523, 400); }, [getOrCreateCtx]);
+  const playTick         = useCallback(() => { const c = getOrCreateCtx(); if (c) playOscillator(c, 800, 40, 0.15); }, [getOrCreateCtx]);
 
-  return { unlockAudio, playSetStart, playSetEnd, playExerciseStart, playExerciseEnd };
+  return { unlockAudio, playSetStart, playSetEnd, playExerciseStart, playExerciseEnd, playTick };
 }
 
 // ---------------------------------------------------------------------------
@@ -143,8 +145,10 @@ function useWorkoutSoundNative(): WorkoutSoundCallbacks {
   const playSetEnd       = useCallback(() => { void playSound(setEndRef); }, []);
   const playExerciseStart = useCallback(() => { void playSound(exStartRef); }, []);
   const playExerciseEnd  = useCallback(() => { void playSound(exEndRef); }, []);
+  // Native tick: reuse set-start sound at low volume; silent-fail if asset missing
+  const playTick         = useCallback(() => { void playSound(setStartRef); }, []);
 
-  return { unlockAudio, playSetStart, playSetEnd, playExerciseStart, playExerciseEnd };
+  return { unlockAudio, playSetStart, playSetEnd, playExerciseStart, playExerciseEnd, playTick };
 }
 
 // ---------------------------------------------------------------------------

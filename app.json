@@ -1,5 +1,6 @@
 {
   "expo": {
+    "owner": "selvakumaras",
     "name": "WorkoutPlanner",
     "slug": "WorkoutPlanner",
     "version": "1.0.0",
@@ -13,7 +14,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.selvakumaras.workoutplanner",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -29,6 +34,12 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "86fa6827-1c89-4081-80a9-c5107ec13edd"
+      }
+    }
   }
 }

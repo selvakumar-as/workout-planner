@@ -2,13 +2,13 @@ import { router } from "expo-router";
 import React, { FC, useState } from "react";
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import type { Equipment, ExerciseGroup } from "../types";
@@ -21,7 +21,7 @@ import { EquipmentValues, ExerciseGroupValues } from "../types";
 const AddExerciseFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   muscleGroup: z.enum(["UPPER_BODY", "CORE", "LOWER_BODY"], {
-    errorMap: () => ({ message: "Muscle group is required" }),
+    error: "Muscle group is required",
   }),
   equipment: z.array(z.enum(["BARBELL", "DUMBBELL", "BODYWEIGHT", "CABLE", "MACHINE"])).optional(),
 });
@@ -101,8 +101,9 @@ const AddExerciseScreen: FC<AddExerciseScreenProps> = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
@@ -222,6 +223,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F5F5F5",
+  },
+  scroll: {
+    flex: 1,
   },
   scrollContent: {
     paddingBottom: 40,

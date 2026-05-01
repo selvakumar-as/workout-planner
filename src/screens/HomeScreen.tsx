@@ -2,14 +2,14 @@ import React, { FC } from "react";
 import {
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useSessionViewModel } from "../viewmodels/useSessionViewModel";
-import type { Session } from "../types";
+import type { Session, SessionSet } from "../types";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -37,6 +37,10 @@ function formatDate(isoString: string): string {
   });
 }
 
+function sumCalories(sets: SessionSet[]): number {
+  return sets.reduce((total, s) => total + (s.caloriesBurnt ?? 0), 0);
+}
+
 // ---------------------------------------------------------------------------
 // SessionHistoryItem (not exported as a screen, so SafeAreaView is NOT used)
 // ---------------------------------------------------------------------------
@@ -49,16 +53,25 @@ const SessionHistoryItem: FC<SessionHistoryItemProps> = ({ session }) => {
       ? styles.badgeAbandoned
       : styles.badgeInProgress;
 
+  const totalCalories = sumCalories(session.sets);
+
   return (
-    <View style={styles.historyItem}>
+    <Pressable
+      style={styles.historyItem}
+      onPress={() => router.push(`/session-summary?id=${session.id}`)}
+      accessibilityLabel={`View summary for session on ${formatDate(session.startedAt)}`}
+    >
       <View style={[styles.badge, badgeStyle]}>
         <Text style={styles.badgeText}>{session.status}</Text>
       </View>
       <View style={styles.historyItemInfo}>
         <Text style={styles.historyItemDate}>{formatDate(session.startedAt)}</Text>
         <Text style={styles.historyItemSets}>{session.sets.length} sets logged</Text>
+        {totalCalories > 0 && (
+          <Text style={styles.historyItemCalories}>{totalCalories.toFixed(1)} cal</Text>
+        )}
       </View>
-    </View>
+    </Pressable>
   );
 };
 
@@ -89,6 +102,22 @@ const HomeScreen: FC<HomeScreenProps> = () => {
         >
           <Text style={styles.workoutsButtonText}>My Workouts</Text>
         </Pressable>
+        <View style={styles.secondaryButtonRow}>
+          <Pressable
+            style={[styles.secondaryButton, styles.secondaryButtonLeft]}
+            onPress={() => router.push("/profile")}
+            accessibilityLabel="Navigate to Profile"
+          >
+            <Text style={styles.secondaryButtonText}>Profile</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.secondaryButton, styles.secondaryButtonRight]}
+            onPress={() => router.push("/metrics")}
+            accessibilityLabel="Navigate to Metrics"
+          >
+            <Text style={styles.secondaryButtonText}>Metrics</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Active session section */}
@@ -222,6 +251,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#6B6B6B",
     marginTop: 2,
+  },
+  historyItemCalories: {
+    fontSize: 12,
+    color: "#D97706",
+    marginTop: 2,
+    fontWeight: "500",
+  },
+  secondaryButtonRow: {
+    flexDirection: "row",
+    marginTop: 10,
+    gap: 10,
+  },
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: "#F0F4FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryButtonLeft: {},
+  secondaryButtonRight: {},
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   // ---- Status badges ----
   badge: {

@@ -15,7 +15,7 @@ const EXERCISES_MULTI: WorkoutExercise[] = [
 ];
 const makeSounds = () => ({
   unlockAudio: jest.fn(), playSetStart: jest.fn(), playSetEnd: jest.fn(),
-  playExerciseStart: jest.fn(), playExerciseEnd: jest.fn(),
+  playExerciseStart: jest.fn(), playExerciseEnd: jest.fn(), playTick: jest.fn(),
 });
 
 function advance(ms: number) { act(() => { jest.advanceTimersByTime(ms); }); }
