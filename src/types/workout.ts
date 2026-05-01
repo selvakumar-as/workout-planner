@@ -44,16 +44,28 @@ export const WorkoutExerciseSchema = z.object({
 export type WorkoutExercise = z.infer<typeof WorkoutExerciseSchema>;
 
 // ---------------------------------------------------------------------------
+// AutoTimerConfig (optional auto-mode timer settings attached to a Workout)
+// ---------------------------------------------------------------------------
+
+export const AutoTimerConfigSchema = z.object({
+  secondsPerSet:              z.number().int().positive(),
+  restBetweenSetsSecs:        z.number().int().nonnegative(),
+  restBetweenExercisesSecs:   z.number().int().nonnegative(),
+});
+export type AutoTimerConfig = z.infer<typeof AutoTimerConfigSchema>;
+
+// ---------------------------------------------------------------------------
 // Workout (template: named collection of exercises)
 // ---------------------------------------------------------------------------
 
 export const WorkoutSchema = z.object({
-  id:          z.uuid(),
-  name:        z.string().min(1),
-  description: z.string().min(1).optional(),
-  exercises:   z.array(WorkoutExerciseSchema),
-  createdAt:   z.iso.datetime(),
-  updatedAt:   z.iso.datetime(),
+  id:              z.uuid(),
+  name:            z.string().min(1),
+  description:     z.string().min(1).optional(),
+  exercises:       z.array(WorkoutExerciseSchema),
+  autoTimerConfig: AutoTimerConfigSchema.optional(),
+  createdAt:       z.iso.datetime(),
+  updatedAt:       z.iso.datetime(),
 });
 export type Workout = z.infer<typeof WorkoutSchema>;
 

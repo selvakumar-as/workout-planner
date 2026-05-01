@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AutoTimerConfigSchema } from "./workout";
 
 // ---------------------------------------------------------------------------
 // Enum
@@ -27,13 +28,15 @@ export type SessionSet = z.infer<typeof SessionSetSchema>;
 // ---------------------------------------------------------------------------
 
 export const SessionSchema = z.object({
-  id:          z.uuid(),
-  workoutId:   z.uuid(),
-  startedAt:   z.iso.datetime(),
-  completedAt: z.iso.datetime().optional(), // absent while IN_PROGRESS
-  status:      SessionStatusSchema,
-  sets:        z.array(SessionSetSchema),
-  notes:       z.string().min(1).optional(),
+  id:              z.uuid(),
+  workoutId:       z.uuid(),
+  startedAt:       z.iso.datetime(),
+  completedAt:     z.iso.datetime().optional(), // absent while IN_PROGRESS
+  status:          SessionStatusSchema,
+  sets:            z.array(SessionSetSchema),
+  notes:           z.string().min(1).optional(),
+  autoMode:        z.boolean().optional(),
+  autoTimerConfig: AutoTimerConfigSchema.optional(),
 });
 export type Session = z.infer<typeof SessionSchema>;
 

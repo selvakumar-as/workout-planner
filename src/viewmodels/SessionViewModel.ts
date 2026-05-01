@@ -1,5 +1,5 @@
 import { sessionStoreApi } from "../store/sessionStore";
-import type { Session, SessionSet, SessionStatus } from "../types";
+import type { AutoTimerConfig, Session, SessionSet, SessionStatus } from "../types";
 
 // ---------------------------------------------------------------------------
 // SessionViewModel
@@ -34,12 +34,27 @@ export class SessionViewModel {
     return sessionStoreApi.getState().sessionHistory;
   }
 
+  get autoMode(): boolean {
+    return sessionStoreApi.getState().activeSession?.autoMode ?? false;
+  }
+
+  get autoTimerConfig(): AutoTimerConfig | null {
+    return sessionStoreApi.getState().activeSession?.autoTimerConfig ?? null;
+  }
+
   // -------------------------------------------------------------------------
   // Actions — delegate to store
   // -------------------------------------------------------------------------
 
-  startSession(workoutId: string): void {
-    sessionStoreApi.getState().startSession(workoutId);
+  startSession(
+    workoutId: string,
+    options?: { autoMode?: boolean; autoTimerConfig?: AutoTimerConfig }
+  ): void {
+    sessionStoreApi.getState().startSession(workoutId, options);
+  }
+
+  setAutoMode(autoMode: boolean): void {
+    sessionStoreApi.getState().setAutoMode(autoMode);
   }
 
   completeSession(): void {
