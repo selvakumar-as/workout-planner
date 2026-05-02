@@ -1,0 +1,17 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Validation test: spaces-only name should show an error message
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to Profile"
+- waitForAnimationToEnd
+# Tap Name field (at ~28% y)
+- tapOn:
+    point: "50%,28%"
+- eraseText: 30
+- inputText: "   "
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn: "Save profile"
+- waitForAnimationToEnd
+- assertVisible: "Name cannot be only spaces"

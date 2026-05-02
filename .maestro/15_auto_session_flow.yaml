@@ -1,0 +1,43 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Auto session flow — Session Test 2 already has auto timer configured (from flow 08)
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Start a new workout session"
+- waitForAnimationToEnd
+- tapOn: "Select workout Session Test 2"
+- waitForAnimationToEnd
+- assertVisible: "Active Session"
+# Toggle to auto mode
+- tapOn: "Switch to auto mode"
+- waitForAnimationToEnd
+# Auto timer should be configured — "Start auto session" button visible
+- assertVisible: "Start auto session"
+- tapOn: "Start auto session"
+- waitForAnimationToEnd
+# Wait for grace period (5s) to pass
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+# Stop early if in RUNNING, or skip rest
+- tapOn:
+    text: "Stop set early and log it"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    text: "Skip rest period"
+    optional: true
+- waitForAnimationToEnd
+# Complete session
+- swipe:
+    direction: DOWN
+    duration: 300
+- tapOn: "Complete workout and end session"
+- waitForAnimationToEnd

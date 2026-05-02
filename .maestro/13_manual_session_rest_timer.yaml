@@ -1,0 +1,26 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Tests rest timer — requires exercise with restSeconds > 0
+# Session Test 2 has Bench Press with no rest configured by default.
+# We start a set and stop it; if rest timer appears we skip it.
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Start a new workout session"
+- waitForAnimationToEnd
+- tapOn: "Select workout Session Test 2"
+- waitForAnimationToEnd
+- assertVisible: "Active Session"
+- tapOn: "Start set"
+- waitForAnimationToEnd
+- tapOn: "Stop and log set"
+- waitForAnimationToEnd
+# If rest timer appeared (restSeconds > 0), Skip it
+- tapOn:
+    text: "Skip rest timer"
+    optional: true
+- waitForAnimationToEnd
+# Clean up
+- swipe:
+    direction: DOWN
+    duration: 300
+- tapOn: "Abandon workout and end session"

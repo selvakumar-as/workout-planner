@@ -1,0 +1,22 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Session Test 2 only has 1 exercise (Bench Press), so "Go to next exercise"
+# will show "Finish exercises". We test prev/next nav buttons are present.
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Start a new workout session"
+- waitForAnimationToEnd
+- tapOn: "Select workout Session Test 2"
+- waitForAnimationToEnd
+- assertVisible: "Active Session"
+# Nav buttons should be visible
+- assertVisible: "Go to previous exercise"
+- assertVisible: "Finish exercises"
+# Tap previous (disabled — single exercise, index 0)
+- tapOn: "Go to previous exercise"
+- waitForAnimationToEnd
+# Clean up
+- swipe:
+    direction: DOWN
+    duration: 300
+- tapOn: "Abandon workout and end session"

@@ -42,7 +42,8 @@ const FILTER_OPTIONS: Array<{ key: FilterOption; label: string }> = [
 const AddExerciseToWorkoutFormSchema = z.object({
   exerciseId: z.string().min(1, "An exercise must be selected"),
   sets: z.number().int().min(1).max(20),
-  reps: z.number().int().min(1).max(100),
+  reps: z.number().int().min(1).max(100).optional(),
+  durationPerSetSecs: z.number().int().min(1).max(3600).optional(),
   weightKg: z.number().min(0).max(500).optional(),
   restSeconds: z.number().int().min(0).max(600).optional(),
 });
@@ -76,6 +77,7 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
   );
   const [sets, setSets] = useState<number | undefined>(existingEntry?.sets);
   const [reps, setReps] = useState<number | undefined>(existingEntry?.reps);
+  const [durationPerSetSecs, setDurationPerSetSecs] = useState<number | undefined>(existingEntry?.durationPerSetSecs);
   const [weightKg, setWeightKg] = useState<number | undefined>(existingEntry?.weightKg);
   const [restSeconds, setRestSeconds] = useState<number | undefined>(existingEntry?.restSeconds);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -85,11 +87,17 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
       ? vm.exercises
       : vm.getExercisesByGroup(filter as ExerciseGroup);
 
+  const selectedExercise = selectedExerciseId !== undefined
+    ? vm.getExerciseById(selectedExerciseId)
+    : undefined;
+  const isTimeBased = selectedExercise?.isTimeBased ?? false;
+
   const handleSave = () => {
     const result = AddExerciseToWorkoutFormSchema.safeParse({
       exerciseId: selectedExerciseId ?? "",
       sets: sets,
-      reps: reps,
+      reps: isTimeBased ? 1 : reps,
+      durationPerSetSecs: isTimeBased ? durationPerSetSecs : undefined,
       weightKg: weightKg,
       restSeconds: restSeconds,
     });
@@ -106,11 +114,22 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
       return;
     }
 
+    // Additional cross-field validation
+    if (isTimeBased && (durationPerSetSecs === undefined || durationPerSetSecs <= 0)) {
+      setErrors({ durationPerSetSecs: "Duration per set is required" });
+      return;
+    }
+    if (!isTimeBased && (reps === undefined || reps <= 0)) {
+      setErrors({ reps: "Reps is required" });
+      return;
+    }
+
     setErrors({});
     if (isEditMode && exerciseId !== undefined) {
       vm.updateWorkoutExercise(workoutId, exerciseId, {
         sets: result.data.sets,
-        reps: result.data.reps,
+        reps: isTimeBased ? 1 : result.data.reps,
+        durationPerSetSecs: isTimeBased ? durationPerSetSecs : undefined,
         weightKg: result.data.weightKg,
         restSeconds: result.data.restSeconds,
       });
@@ -118,7 +137,8 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
       vm.addExerciseToWorkout(workoutId, {
         exerciseId: result.data.exerciseId,
         sets: result.data.sets,
-        reps: result.data.reps,
+        reps: isTimeBased ? 1 : (result.data.reps ?? 1),
+        durationPerSetSecs: isTimeBased ? durationPerSetSecs : undefined,
         weightKg: result.data.weightKg,
         restSeconds: result.data.restSeconds,
       });
@@ -279,20 +299,41 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
             <Text style={styles.errorText}>{errors.sets}</Text>
           ) : null}
 
-          <SetRepInput
-            label="Reps *"
-            value={reps}
-            onChange={(v) => {
-              setReps(v);
-              if (errors.reps) setErrors((prev) => ({ ...prev, reps: "" }));
-            }}
-            min={1}
-            max={100}
-            placeholder="e.g. 10"
-          />
-          {errors.reps ? (
-            <Text style={styles.errorText}>{errors.reps}</Text>
-          ) : null}
+          {isTimeBased ? (
+            <>
+              <SetRepInput
+                label="Duration per Set (seconds) *"
+                value={durationPerSetSecs}
+                onChange={(v) => {
+                  setDurationPerSetSecs(v);
+                  if (errors.durationPerSetSecs) setErrors((prev) => ({ ...prev, durationPerSetSecs: "" }));
+                }}
+                min={10}
+                max={3600}
+                placeholder="e.g. 30"
+              />
+              {errors.durationPerSetSecs ? (
+                <Text style={styles.errorText}>{errors.durationPerSetSecs}</Text>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <SetRepInput
+                label="Reps *"
+                value={reps}
+                onChange={(v) => {
+                  setReps(v);
+                  if (errors.reps) setErrors((prev) => ({ ...prev, reps: "" }));
+                }}
+                min={1}
+                max={100}
+                placeholder="e.g. 10"
+              />
+              {errors.reps ? (
+                <Text style={styles.errorText}>{errors.reps}</Text>
+              ) : null}
+            </>
+          )}
 
           <SetRepInput
             label="Weight (kg, optional)"

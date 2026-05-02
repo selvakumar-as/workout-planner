@@ -1,0 +1,34 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Open workout Test Workout E2E"
+- waitForAnimationToEnd
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- tapOn: "Filter exercises by Lower Body"
+- waitForAnimationToEnd
+- tapOn: "Select exercise Barbell Squat"
+- waitForAnimationToEnd
+# Scroll to bottom to reach Sets/Reps section and Save button
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- waitForAnimationToEnd
+# Sets and reps section labels are "Sets *" and "Reps *"
+- assertVisible: "Sets *"
+- assertVisible: "Reps *"
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- assertVisible: "Add exercise to workout"

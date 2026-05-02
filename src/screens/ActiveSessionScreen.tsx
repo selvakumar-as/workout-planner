@@ -292,6 +292,8 @@ const AutoModeContent: FC<AutoModeContentProps> = ({
 
   const [autoCompleteSecsLeft, setAutoCompleteSecsLeft] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onCompleteNowRef = useRef(onCompleteNow);
+  onCompleteNowRef.current = onCompleteNow;
 
   // We always call useAutoSession to satisfy Rules of Hooks.
   // Use a fallback config when not configured.
@@ -350,19 +352,19 @@ const AutoModeContent: FC<AutoModeContentProps> = ({
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      onCompleteNow();
+      onCompleteNowRef.current();
       return;
     }
-    intervalRef.current = setInterval(() => {
+    const id = setInterval(() => {
       setAutoCompleteSecsLeft((prev) => (prev !== null ? prev - 1 : null));
     }, 1000);
+    intervalRef.current = id;
     return () => {
-      if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      clearInterval(id);
+      intervalRef.current = null;
     };
-  }, [autoCompleteSecsLeft, onCompleteNow]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCompleteSecsLeft]);
 
   if (noConfig) {
     return (
@@ -708,9 +710,10 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   const autoMode = sessionVm.autoMode;
   const autoTimerConfig = sessionVm.autoTimerConfig;
 
-  // Auto mode toggle disabled while a set is in progress (manual) or auto
-  // session is running.
-  const toggleDisabled = setStarted;
+  // Auto mode toggle disabled while a set is in progress (manual) or when
+  // trying to switch to auto mode without a timer configured.
+  const toggleToAutoDisabled = !autoMode && autoTimerConfig === null;
+  const toggleDisabled = setStarted || toggleToAutoDisabled;
 
   const handleToggleAutoMode = (value: boolean) => {
     sessionVm.setAutoMode(value);
@@ -860,6 +863,9 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
                 onToggle={handleToggleAutoMode}
                 disabled={toggleDisabled}
               />
+              {autoTimerConfig === null && !autoMode && (
+                <Text style={styles.toggleHint}>Configure auto timer first</Text>
+              )}
             </View>
           </View>
           <Text
@@ -1123,6 +1129,11 @@ const styles = StyleSheet.create({
   },
   toggleRow: {
     marginTop: 8,
+  },
+  toggleHint: {
+    fontSize: 11,
+    color: "#D97706",
+    marginTop: 2,
   },
   totalElapsed: {
     fontSize: 36,

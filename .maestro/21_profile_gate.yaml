@@ -1,0 +1,18 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Verifies that users cannot start a workout without setting profile weight
+# This test assumes fresh app state with no weight set in the profile.
+# If profile weight is already set, the gate will not trigger — run on a clean simulator or
+# clear app data before executing this flow in isolation.
+- launchApp
+- waitForAnimationToEnd
+# Attempt to start a session without a weight configured in profile
+- tapOn: "Start a new workout session"
+- waitForAnimationToEnd
+# Expect the Profile Incomplete alert to appear
+- assertVisible: "Profile Incomplete"
+# Tap "Go to Profile" to navigate directly from the alert
+- tapOn: "Go to Profile"
+- waitForAnimationToEnd
+# Verify we landed on the Profile screen
+- assertVisible: "My Profile"

@@ -1,5 +1,6 @@
 import React, { FC } from "react";
 import {
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -10,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import { useSessionViewModel } from "../viewmodels/useSessionViewModel";
+import { useUserProfileViewModel } from "../viewmodels/useUserProfileViewModel";
 import type { Workout } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -56,8 +58,20 @@ const WorkoutRow: FC<WorkoutRowProps> = ({ workout, onPress }) => (
 const WorkoutSelectScreen: FC<WorkoutSelectScreenProps> = () => {
   const workoutVm = useWorkoutViewModel();
   const sessionVm = useSessionViewModel();
+  const { isProfileComplete } = useUserProfileViewModel();
 
   const handleSelectWorkout = (workoutId: string) => {
+    if (!isProfileComplete) {
+      Alert.alert(
+        "Profile Incomplete",
+        "Please add your weight in your Profile before starting a workout. This is required for calorie tracking.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Go to Profile", onPress: () => router.push("/profile") },
+        ]
+      );
+      return;
+    }
     const workout = workoutVm.getWorkoutById(workoutId);
     sessionVm.startSession(workoutId, {
       autoTimerConfig: workout?.autoTimerConfig,

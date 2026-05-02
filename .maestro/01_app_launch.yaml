@@ -1,0 +1,9 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- assertVisible: "WorkoutPlanner"
+- assertVisible: "Start a new workout session"
+- assertVisible: "Navigate to My Workouts"
+- assertVisible: "Navigate to Profile"
+- assertVisible: "Navigate to Metrics"

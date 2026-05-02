@@ -1,0 +1,9 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to Metrics"
+- waitForAnimationToEnd
+# Metrics screen should load — filter tabs are always visible
+- assertVisible: "Filter metrics by Today"
+- assertVisible: "Filter metrics by Last 7 Days"
