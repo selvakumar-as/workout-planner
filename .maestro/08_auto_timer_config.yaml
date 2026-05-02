@@ -1,0 +1,26 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Open workout Test Workout E2E"
+- waitForAnimationToEnd
+- tapOn: "Configure auto timer for this workout"
+- waitForAnimationToEnd
+- tapOn: "Seconds per set"
+- eraseText: 10
+- inputText: "45"
+- tapOn: "Rest between sets in seconds"
+- eraseText: 10
+- inputText: "60"
+- tapOn: "Rest between exercises in seconds"
+- eraseText: 10
+- inputText: "90"
+# Dismiss keyboard via toolbar Done button before tapping Save
+- tapOn: "Done"
+- waitForAnimationToEnd
+- tapOn: "Save auto timer configuration"
+- waitForAnimationToEnd
+# Assert navigated back to workout detail
+- assertVisible: "Configure auto timer for this workout"

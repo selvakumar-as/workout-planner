@@ -1,0 +1,22 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Create new workout"
+- waitForAnimationToEnd
+- tapOn: "Workout name"
+- inputText: "Test Workout E2E"
+- hideKeyboard
+- waitForAnimationToEnd
+# Description field: accessibilityText is "Workout description e.g. Chest, shoulders, triceps"
+# Use point-based tap at approximate coordinates (center of description field)
+- tapOn:
+    point: "50%,40%"
+- inputText: "E2E test description"
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn: "Save workout"
+- waitForAnimationToEnd
+- assertVisible: "Open workout Test Workout E2E"

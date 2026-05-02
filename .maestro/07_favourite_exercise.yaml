@@ -1,0 +1,28 @@
+appId: com.selvakumaras.workoutplanner
+---
+# NOTE: The favourite star button is a nested Pressable inside the exercise row
+# Pressable. iOS accessibility collapses nested Pressables, so the star's
+# accessibilityLabel is not reachable by label. We use a coordinate tap.
+# The star for Bench Press (4th row in Upper Body) is at ~7% x, ~35% y.
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Open workout Test Workout E2E"
+- waitForAnimationToEnd
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- tapOn: "Filter exercises by Upper Body"
+- waitForAnimationToEnd
+# Tap the star icon for Bench Press (4th row, star at left edge)
+# Upper Body filter: Barbell Curl (row1), Arnold Press (row2), Barbell Row (row3), Bench Press (row4)
+# Each row ~66px tall, starting at y~247. Bench Press row center y ~ 247 + 3*66 + 33 = 478px / 874 = ~55%
+- tapOn:
+    point: "7%,55%"
+- waitForAnimationToEnd
+# Tap again to unfavourite (same position)
+- tapOn:
+    point: "7%,55%"
+- waitForAnimationToEnd
+# Verify screen is still on add-exercise (not navigated away)
+- assertVisible: "Filter exercises by Upper Body"

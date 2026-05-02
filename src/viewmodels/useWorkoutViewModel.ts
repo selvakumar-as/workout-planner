@@ -17,6 +17,8 @@ export function useWorkoutViewModel() {
   const removeExerciseFromWorkoutAction = useWorkoutStore((s) => s.removeExerciseFromWorkout);
   const updateWorkoutExerciseAction = useWorkoutStore((s) => s.updateWorkoutExercise);
   const updateWorkoutAction = useWorkoutStore((s) => s.updateWorkout);
+  const deleteWorkoutAction = useWorkoutStore((s) => s.deleteWorkout);
+  const deleteWorkoutsAction = useWorkoutStore((s) => s.deleteWorkouts);
   const toggleFavouriteAction = useWorkoutStore((s) => s.toggleFavourite);
 
   const sortedExercises = [...exercises].sort((a, b) => {
@@ -61,10 +63,23 @@ export function useWorkoutViewModel() {
   const updateWorkoutExercise = (
     workoutId: string,
     exerciseId: string,
-    patch: Partial<Pick<WorkoutExercise, 'sets' | 'reps' | 'weightKg' | 'restSeconds'>>
+    patch: Partial<Pick<WorkoutExercise, 'sets' | 'reps' | 'weightKg' | 'restSeconds' | 'durationPerSetSecs'>>
   ): void => {
     updateWorkoutExerciseAction(workoutId, exerciseId, patch);
   };
+
+  const deleteWorkout = (workoutId: string): void => {
+    deleteWorkoutAction(workoutId);
+  };
+
+  const deleteWorkouts = (workoutIds: string[]): void => {
+    deleteWorkoutsAction(workoutIds);
+  };
+
+  const isWorkoutNameTaken = (name: string, excludeId?: string): boolean =>
+    workouts.some(
+      (w) => w.name.trim().toLowerCase() === name.trim().toLowerCase() && w.id !== excludeId
+    );
 
   const updateWorkoutTimerConfig = (
     workoutId: string,
@@ -91,6 +106,9 @@ export function useWorkoutViewModel() {
     removeExerciseFromWorkout,
     updateWorkoutExercise,
     updateWorkoutTimerConfig,
+    deleteWorkout,
+    deleteWorkouts,
+    isWorkoutNameTaken,
     toggleFavourite,
   };
 }

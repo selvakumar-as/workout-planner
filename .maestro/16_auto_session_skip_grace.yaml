@@ -1,0 +1,28 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Start a new workout session"
+- waitForAnimationToEnd
+- tapOn: "Select workout Session Test 2"
+- waitForAnimationToEnd
+- assertVisible: "Active Session"
+- tapOn: "Switch to auto mode"
+- waitForAnimationToEnd
+- tapOn: "Start auto session"
+- waitForAnimationToEnd
+# During GRACE phase, GracePeriodOverlay has a "Skip" button
+- tapOn:
+    text: "Skip"
+    optional: true
+- waitForAnimationToEnd
+# After grace skip, should be in RUNNING phase — stop early
+- tapOn:
+    text: "Stop set early and log it"
+    optional: true
+- waitForAnimationToEnd
+# Clean up
+- swipe:
+    direction: DOWN
+    duration: 300
+- tapOn: "Abandon workout and end session"

@@ -1,6 +1,7 @@
-import { router } from "expo-router";
-import React, { FC } from "react";
+import { router, Stack } from "expo-router";
+import React, { FC, useState, useCallback } from "react";
 import {
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -18,24 +19,27 @@ import type { Workout } from "../types";
 export interface WorkoutListScreenProps {}
 
 // ---------------------------------------------------------------------------
-// Sub-component types
+// WorkoutRow
 // ---------------------------------------------------------------------------
 
 export interface WorkoutRowProps {
   workout: Workout;
   onPress: () => void;
+  onDelete: () => void;
+  isSelectMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// WorkoutRow
-// ---------------------------------------------------------------------------
-
-const WorkoutRow: FC<WorkoutRowProps> = ({ workout, onPress }) => (
-  <Pressable
-    style={styles.row}
-    onPress={onPress}
-    accessibilityLabel={`Open workout ${workout.name}`}
-  >
+const WorkoutRow: FC<WorkoutRowProps> = ({
+  workout,
+  onPress,
+  onDelete,
+  isSelectMode,
+  isSelected,
+  onToggleSelect,
+}) => {
+  const rowContent = (
     <View style={styles.rowContent}>
       <Text style={styles.rowTitle}>{workout.name}</Text>
       {workout.description ? (
@@ -48,8 +52,105 @@ const WorkoutRow: FC<WorkoutRowProps> = ({ workout, onPress }) => (
         {workout.exercises.length === 1 ? "exercise" : "exercises"}
       </Text>
     </View>
-    <Text style={styles.rowChevron}>›</Text>
-  </Pressable>
+  );
+
+  if (isSelectMode) {
+    return (
+      <Pressable
+        style={styles.row}
+        onPress={onToggleSelect}
+        accessibilityLabel={`${isSelected ? "Deselect" : "Select"} workout ${workout.name}`}
+      >
+        <View
+          style={[styles.checkbox, isSelected && styles.checkboxSelected]}
+        >
+          {isSelected ? <View style={styles.checkboxInner} /> : null}
+        </View>
+        {rowContent}
+      </Pressable>
+    );
+  }
+
+  return (
+    <Pressable
+      style={styles.row}
+      onPress={onPress}
+      accessibilityLabel={`Open workout ${workout.name}`}
+    >
+      {rowContent}
+      <Text style={styles.rowChevron}>›</Text>
+      <Pressable
+        style={styles.deleteButton}
+        onPress={onDelete}
+        accessibilityLabel={`Delete workout ${workout.name}`}
+        hitSlop={8}
+      >
+        <Text style={styles.deleteButtonText}>⌫</Text>
+      </Pressable>
+    </Pressable>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// SelectionToolbar
+// ---------------------------------------------------------------------------
+
+interface SelectionToolbarProps {
+  totalCount: number;
+  selectedCount: number;
+  onSelectAll: () => void;
+  onUnselectAll: () => void;
+  onDeleteSelected: () => void;
+  onCancel: () => void;
+}
+
+const SelectionToolbar: FC<SelectionToolbarProps> = ({
+  totalCount: _totalCount,
+  selectedCount,
+  onSelectAll,
+  onUnselectAll,
+  onDeleteSelected,
+  onCancel,
+}) => (
+  <View style={styles.toolbar}>
+    <Pressable
+      style={styles.toolbarButton}
+      onPress={onSelectAll}
+      accessibilityLabel="Select all workouts"
+    >
+      <Text style={styles.toolbarButtonText}>Select All</Text>
+    </Pressable>
+
+    <Pressable
+      style={styles.toolbarButton}
+      onPress={onUnselectAll}
+      accessibilityLabel="Unselect all workouts"
+    >
+      <Text style={styles.toolbarButtonText}>Unselect All</Text>
+    </Pressable>
+
+    <Pressable
+      style={[
+        styles.toolbarDeleteButton,
+        selectedCount === 0 && styles.toolbarDeleteButtonDisabled,
+      ]}
+      onPress={onDeleteSelected}
+      accessibilityLabel="Delete selected workouts"
+      disabled={selectedCount === 0}
+    >
+      <Text style={styles.toolbarDeleteButtonText}>
+        Delete Selected ({selectedCount})
+      </Text>
+    </Pressable>
+
+    <Pressable
+      style={styles.toolbarCancelButton}
+      onPress={onCancel}
+      accessibilityLabel="Cancel selection"
+    >
+      <Text style={styles.toolbarCancelButtonText}>Cancel</Text>
+    </Pressable>
+  </View>
 );
 
 // ---------------------------------------------------------------------------
@@ -59,8 +160,76 @@ const WorkoutRow: FC<WorkoutRowProps> = ({ workout, onPress }) => (
 const WorkoutListScreen: FC<WorkoutListScreenProps> = () => {
   const vm = useWorkoutViewModel();
 
+  const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
+    new Set<string>()
+  );
+
+  const selectedCount = selectedIds.size;
+
+  const enterSelectMode = useCallback(() => {
+    setIsSelectMode(true);
+    setSelectedIds(new Set<string>());
+  }, []);
+
+  const exitSelectMode = useCallback(() => {
+    setIsSelectMode(false);
+    setSelectedIds(new Set<string>());
+  }, []);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set<string>(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(new Set<string>(vm.workouts.map((w) => w.id)));
+  }, [vm.workouts]);
+
+  const handleUnselectAll = useCallback(() => {
+    setSelectedIds(new Set<string>());
+  }, []);
+
+  const handleDeleteSelected = useCallback(() => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    Alert.alert(
+      "Delete Workouts",
+      `Delete ${ids.length} workout${ids.length === 1 ? "" : "s"}? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            vm.deleteWorkouts(ids);
+            exitSelectMode();
+          },
+        },
+      ]
+    );
+  }, [selectedIds, vm, exitSelectMode]);
+
   const handleRowPress = (id: string) => {
     router.push({ pathname: "/workouts/[id]", params: { id } });
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    Alert.alert(
+      "Delete Workout",
+      `Are you sure you want to delete "${name}"? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => vm.deleteWorkout(id) },
+      ]
+    );
   };
 
   const handleFAB = () => {
@@ -68,14 +237,44 @@ const WorkoutListScreen: FC<WorkoutListScreenProps> = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+      <Stack.Screen
+        options={{
+          headerRight: () =>
+            !isSelectMode ? (
+              <Pressable
+                onPress={enterSelectMode}
+                accessibilityLabel="Enter select mode"
+                style={styles.headerSelectButton}
+              >
+                <Text style={styles.headerSelectButtonText}>Select</Text>
+              </Pressable>
+            ) : null,
+        }}
+      />
+
+      {isSelectMode && (
+        <SelectionToolbar
+          totalCount={vm.workouts.length}
+          selectedCount={selectedCount}
+          onSelectAll={handleSelectAll}
+          onUnselectAll={handleUnselectAll}
+          onDeleteSelected={handleDeleteSelected}
+          onCancel={exitSelectMode}
+        />
+      )}
+
       <FlatList<Workout>
         data={vm.workouts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <WorkoutRow
             workout={item}
+            isSelectMode={isSelectMode}
+            isSelected={selectedIds.has(item.id)}
+            onToggleSelect={() => toggleSelect(item.id)}
             onPress={() => handleRowPress(item.id)}
+            onDelete={() => handleDelete(item.id, item.name)}
           />
         )}
         ListEmptyComponent={
@@ -88,14 +287,15 @@ const WorkoutListScreen: FC<WorkoutListScreenProps> = () => {
         contentContainerStyle={styles.listContent}
       />
 
-      {/* Floating action button */}
-      <Pressable
-        style={styles.fab}
-        onPress={handleFAB}
-        accessibilityLabel="Create new workout"
-      >
-        <Text style={styles.fabLabel}>+</Text>
-      </Pressable>
+      {!isSelectMode && (
+        <Pressable
+          style={styles.fab}
+          onPress={handleFAB}
+          accessibilityLabel="Create new workout"
+        >
+          <Text style={styles.fabLabel}>+</Text>
+        </Pressable>
+      )}
     </SafeAreaView>
   );
 };
@@ -149,6 +349,16 @@ const styles = StyleSheet.create({
     color: "#D1D5DB",
     marginLeft: 8,
   },
+  deleteButton: {
+    marginLeft: 8,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#FEE2E2",
+  },
+  deleteButtonText: {
+    fontSize: 16,
+    color: "#DC2626",
+  },
   emptyContainer: {
     alignItems: "center",
     marginTop: 60,
@@ -176,5 +386,88 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 32,
     fontWeight: "400",
+  },
+  // Header select button
+  headerSelectButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  headerSelectButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+  // Toolbar container
+  toolbar: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#F0F4FF",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#BFDBFE",
+    gap: 8,
+  },
+  // Toolbar buttons
+  toolbarButton: {
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    backgroundColor: "#FFFFFF",
+  },
+  toolbarButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+  toolbarDeleteButton: {
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#DC2626",
+    borderWidth: 0,
+  },
+  toolbarDeleteButtonDisabled: {
+    opacity: 0.4,
+  },
+  toolbarDeleteButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  toolbarCancelButton: {
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#F3F4F6",
+    borderWidth: 0,
+  },
+  toolbarCancelButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  // Checkbox
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: "#2563EB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  checkboxSelected: {
+    backgroundColor: "#2563EB",
+  },
+  checkboxInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#FFFFFF",
   },
 });

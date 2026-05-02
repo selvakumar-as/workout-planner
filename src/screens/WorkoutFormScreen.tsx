@@ -68,6 +68,11 @@ const WorkoutFormScreen: FC<WorkoutFormScreenProps> = () => {
       return;
     }
 
+    if (vm.isWorkoutNameTaken(result.data.name)) {
+      setErrors({ name: "A workout with this name already exists" });
+      return;
+    }
+
     setErrors({});
     vm.addWorkout(
       result.data.name,

@@ -1,0 +1,83 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Creates "Session Test 2" workout with Bench Press (3 sets x 10 reps) added
+- launchApp
+- waitForAnimationToEnd
+# Set up user profile with weight (required before starting workouts)
+- tapOn: "Navigate to Profile"
+- waitForAnimationToEnd
+- tapOn:
+    point: "50%,75%"  # Weight input (approximate — profile fields: Name, Age, Gender, Height, Weight)
+- clearText
+- inputText: "75"
+- tapOn: "Save profile"
+- waitForAnimationToEnd
+- tapOn: "Go back"
+- waitForAnimationToEnd
+# Now navigate to My Workouts to create the session workout
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Create new workout"
+- waitForAnimationToEnd
+- tapOn: "Workout name"
+- inputText: "Session Test 2"
+- tapOn: "Save workout"
+- waitForAnimationToEnd
+- tapOn: "Open workout Session Test 2"
+- waitForAnimationToEnd
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- tapOn: "Filter exercises by Upper Body"
+- waitForAnimationToEnd
+- tapOn: "Select exercise Bench Press"
+- waitForAnimationToEnd
+# Scroll to Sets/Reps section
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- waitForAnimationToEnd
+# Tap Sets input (the TextInput, not the label) — Sets * label is at ~45%y,
+# the input box is below it at ~55%y
+- tapOn:
+    point: "50%,55%"
+- inputText: "3"
+# Tap "Configure" section header to dismiss keyboard (non-interactive text)
+- tapOn: "Configure"
+- waitForAnimationToEnd
+# Now tap Reps input (at ~65%y without keyboard interference)
+- tapOn:
+    point: "50%,65%"
+- inputText: "10"
+# Tap "Configure" to dismiss keyboard again
+- tapOn: "Configure"
+- waitForAnimationToEnd
+# Now tap Save
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- assertVisible: "Edit exercise Bench Press"
+# Configure auto timer for Session Test 2 so flows 15 and 16 can use auto session
+- tapOn: "Configure auto timer for this workout"
+- waitForAnimationToEnd
+- tapOn: "Seconds per set"
+- eraseText: 10
+- inputText: "45"
+- tapOn: "Rest between sets in seconds"
+- eraseText: 10
+- inputText: "60"
+- tapOn: "Rest between exercises in seconds"
+- eraseText: 10
+- inputText: "90"
+- tapOn: "Done"
+- waitForAnimationToEnd
+- tapOn: "Save auto timer configuration"
+- waitForAnimationToEnd
+- assertVisible: "Configure auto timer for this workout"

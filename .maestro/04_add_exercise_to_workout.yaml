@@ -1,0 +1,32 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Open workout Test Workout E2E"
+- waitForAnimationToEnd
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- tapOn: "Filter exercises by Upper Body"
+- waitForAnimationToEnd
+- tapOn: "Select exercise Bench Press"
+- waitForAnimationToEnd
+# Scroll all the way to bottom (past the long exercise list)
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- waitForAnimationToEnd
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+# Should navigate back to workout detail
+- assertVisible: "Add exercise to workout"

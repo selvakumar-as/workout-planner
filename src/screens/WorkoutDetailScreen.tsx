@@ -44,8 +44,12 @@ export interface ExerciseRowProps {
 // ---------------------------------------------------------------------------
 
 const ExerciseRow: FC<ExerciseRowProps> = ({ entry, exercise, onEdit }) => {
+  const isTimeBased = exercise.isTimeBased ?? false;
   const weightText = entry.weightKg !== undefined ? ` · ${entry.weightKg} kg` : "";
   const restText = entry.restSeconds !== undefined ? ` · ${entry.restSeconds}s rest` : "";
+  const configText = isTimeBased
+    ? `${entry.sets} sets × ${entry.durationPerSetSecs ?? "?"}s${restText}`
+    : `${entry.sets} × ${entry.reps}${weightText}${restText}`;
   return (
     <Pressable
       style={styles.exerciseRow}
@@ -55,7 +59,7 @@ const ExerciseRow: FC<ExerciseRowProps> = ({ entry, exercise, onEdit }) => {
       <View style={styles.exerciseRowContent}>
         <Text style={styles.exerciseName}>{exercise.name}</Text>
         <Text style={styles.exerciseMeta}>
-          {entry.sets} × {entry.reps}{weightText}{restText}
+          {configText}
         </Text>
       </View>
       <Text style={styles.exerciseEditHint}>›</Text>

@@ -1,0 +1,17 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Verifies that saving a workout with a duplicate name is rejected with an error message.
+# Depends on 00_setup_session_workout having run first so "Session Test 2" already exists.
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Create new workout"
+- waitForAnimationToEnd
+# Enter a name that already exists
+- tapOn: "Workout name"
+- inputText: "Session Test 2"
+- tapOn: "Save workout"
+- waitForAnimationToEnd
+# Expect inline validation error for duplicate name
+- assertVisible: "A workout with this name already exists"

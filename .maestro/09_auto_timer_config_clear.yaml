@@ -1,0 +1,16 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Open workout Test Workout E2E"
+- waitForAnimationToEnd
+- tapOn: "Configure auto timer for this workout"
+- waitForAnimationToEnd
+# Config already exists from flow 08, so Clear button should be visible
+- assertVisible: "Clear auto timer configuration"
+- tapOn: "Clear auto timer configuration"
+- waitForAnimationToEnd
+# Assert navigated back to workout detail
+- assertVisible: "Configure auto timer for this workout"

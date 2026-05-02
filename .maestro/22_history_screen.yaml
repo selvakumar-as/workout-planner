@@ -1,0 +1,18 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Verifies history screen navigation works.
+# Depends on 00_setup_session_workout and 10_manual_session_start_complete having run first
+# so that at least one completed session exists, making the "View all workout history" button visible.
+- launchApp
+- waitForAnimationToEnd
+# The footer button only appears when sessions exist
+- assertVisible: "View all workout history"
+- tapOn: "View all workout history"
+- waitForAnimationToEnd
+# Confirm the History screen loaded
+- assertVisible: "Workout History"
+# Navigate back to home
+- tapOn: "Go back to home"
+- waitForAnimationToEnd
+# Confirm we returned to the home screen
+- assertVisible: "WorkoutPlanner"

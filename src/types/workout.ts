@@ -27,6 +27,7 @@ export const ExerciseSchema = z.object({
   defaultReps:     z.number().int().positive().optional(),
   defaultWeightKg: z.number().nonnegative().optional(),
   isFavourite:     z.boolean().optional(),
+  isTimeBased:     z.boolean().optional(),
   createdAt:       z.iso.datetime(),
 });
 export type Exercise = z.infer<typeof ExerciseSchema>;
@@ -36,12 +37,13 @@ export type Exercise = z.infer<typeof ExerciseSchema>;
 // ---------------------------------------------------------------------------
 
 export const WorkoutExerciseSchema = z.object({
-  exerciseId:  z.uuid(),
-  order:       z.number().int().nonnegative(),
-  sets:        z.number().int().positive(),
-  reps:        z.number().int().positive(),
-  weightKg:    z.number().nonnegative().optional(),
-  restSeconds: z.number().int().nonnegative().optional(),
+  exerciseId:         z.uuid(),
+  order:              z.number().int().nonnegative(),
+  sets:               z.number().int().positive(),
+  reps:               z.number().int().positive(),
+  weightKg:           z.number().nonnegative().optional(),
+  restSeconds:        z.number().int().nonnegative().optional(),
+  durationPerSetSecs: z.number().int().positive().optional(),
 });
 export type WorkoutExercise = z.infer<typeof WorkoutExerciseSchema>;
 

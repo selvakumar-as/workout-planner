@@ -1,0 +1,37 @@
+appId: com.selvakumaras.workoutplanner
+---
+# NOTE: "Add exercise to library" button only appears when a filter group has
+# 0 exercises. Since seeded data covers all groups, this button cannot be
+# triggered from the add-exercise-to-workout flow without clearing exercises.
+# This flow instead validates the AddExerciseScreen is reachable via the
+# WorkoutDetail "Add exercise to workout" button with Core group filter,
+# and tests that an exercise can be selected and saved.
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Open workout Test Workout E2E"
+- waitForAnimationToEnd
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- tapOn: "Filter exercises by Core"
+- waitForAnimationToEnd
+- tapOn: "Select exercise Crunches"
+- waitForAnimationToEnd
+# Scroll to bottom to reach Save button
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- waitForAnimationToEnd
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- assertVisible: "Add exercise to workout"

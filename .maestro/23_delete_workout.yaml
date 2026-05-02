@@ -1,0 +1,26 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Creates a new workout and then deletes it, verifying the delete confirmation alert
+# and that the workout disappears from the list afterward.
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Create new workout"
+- waitForAnimationToEnd
+- tapOn: "Workout name"
+- inputText: "To Delete Workout"
+- tapOn: "Save workout"
+- waitForAnimationToEnd
+# Confirm the new workout appears in the list
+- assertVisible: "Open workout To Delete Workout"
+# Tap the delete button (⌫) for this workout row
+- tapOn: "Delete workout To Delete Workout"
+- waitForAnimationToEnd
+# Confirm the delete confirmation alert appeared
+- assertVisible: "Delete Workout"
+# Confirm the deletion
+- tapOn: "Delete"
+- waitForAnimationToEnd
+# Verify the workout is no longer listed
+- assertNotVisible: "Open workout To Delete Workout"

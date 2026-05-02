@@ -1,0 +1,13 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Create new workout"
+- waitForAnimationToEnd
+# Do not enter a name — just tap Save
+- tapOn: "Save workout"
+- waitForAnimationToEnd
+# Assert error message is shown — form should stay on screen
+- assertVisible: "Name is required"

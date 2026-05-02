@@ -1,0 +1,17 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Start a new workout session"
+- waitForAnimationToEnd
+- tapOn: "Select workout Session Test 2"
+- waitForAnimationToEnd
+- assertVisible: "Active Session"
+- swipe:
+    direction: DOWN
+    duration: 300
+- waitForAnimationToEnd
+- tapOn: "Abandon workout and end session"
+- waitForAnimationToEnd
+- assertVisible: "WorkoutPlanner"
+- assertVisible: "Start a new workout session"

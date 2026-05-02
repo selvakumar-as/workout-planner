@@ -1,5 +1,6 @@
 import React, { FC } from "react";
 import {
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -9,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useSessionViewModel } from "../viewmodels/useSessionViewModel";
+import { useUserProfileViewModel } from "../viewmodels/useUserProfileViewModel";
 import type { Session, SessionSet } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -87,8 +89,24 @@ export interface HomeScreenProps {}
 
 const HomeScreen: FC<HomeScreenProps> = () => {
   const vm = useSessionViewModel();
+  const { isProfileComplete } = useUserProfileViewModel();
 
   const recentSessions = vm.sessionHistory.slice(0, MAX_HISTORY_ITEMS);
+
+  const handleStartWorkout = () => {
+    if (!isProfileComplete) {
+      Alert.alert(
+        "Profile Incomplete",
+        "Please add your weight in your Profile before starting a workout. This is required for calorie tracking.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Go to Profile", onPress: () => router.push("/profile") },
+        ]
+      );
+      return;
+    }
+    router.push("/select-workout");
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -100,7 +118,7 @@ const HomeScreen: FC<HomeScreenProps> = () => {
           onPress={() => router.push("/workouts")}
           accessibilityLabel="Navigate to My Workouts"
         >
-          <Text style={styles.workoutsButtonText}>My Workouts</Text>
+          <Text style={styles.workoutsButtonText}>Create Workout Plan</Text>
         </Pressable>
         <View style={styles.secondaryButtonRow}>
           <Pressable
@@ -157,7 +175,7 @@ const HomeScreen: FC<HomeScreenProps> = () => {
       {!vm.isSessionActive && (
         <Pressable
           style={[styles.button, styles.buttonStart]}
-          onPress={() => router.push("/select-workout")}
+          onPress={handleStartWorkout}
           accessibilityLabel="Start a new workout session"
         >
           <Text style={styles.buttonText}>Start Workout</Text>
@@ -172,6 +190,17 @@ const HomeScreen: FC<HomeScreenProps> = () => {
         renderItem={({ item }) => <SessionHistoryItem session={item} />}
         ListEmptyComponent={
           <Text style={styles.emptyText}>No sessions yet. Start your first workout!</Text>
+        }
+        ListFooterComponent={
+          vm.sessionHistory.length > 0 ? (
+            <Pressable
+              style={styles.historyButton}
+              onPress={() => router.push("/history")}
+              accessibilityLabel="View all workout history"
+            >
+              <Text style={styles.historyButtonText}>View All History</Text>
+            </Pressable>
+          ) : null
         }
         contentContainerStyle={styles.listContent}
       />
@@ -374,5 +403,19 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     fontSize: 14,
     marginTop: 24,
+  },
+  // ---- History button ----
+  historyButton: {
+    marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: "#2563EB",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  historyButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2563EB",
   },
 });

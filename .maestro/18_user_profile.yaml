@@ -1,0 +1,14 @@
+appId: com.selvakumaras.workoutplanner
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to Profile"
+- waitForAnimationToEnd
+- tapOn: "Select gender Male"
+- waitForAnimationToEnd
+- tapOn: "Toggle metronome sound"
+- waitForAnimationToEnd
+- tapOn: "Save profile"
+# The button briefly shows "Saved!" then returns to "Save Profile"
+# Assert the profile screen is still visible (save didn't navigate away)
+- assertVisible: "My Profile"

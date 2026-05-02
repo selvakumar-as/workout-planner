@@ -31,8 +31,10 @@ interface WorkoutState {
   updateWorkoutExercise: (
     workoutId: string,
     exerciseId: string,
-    patch: Partial<Pick<WorkoutExercise, 'sets' | 'reps' | 'weightKg' | 'restSeconds'>>
+    patch: Partial<Pick<WorkoutExercise, 'sets' | 'reps' | 'weightKg' | 'restSeconds' | 'durationPerSetSecs'>>
   ) => void;
+  deleteWorkout: (workoutId: string) => void;
+  deleteWorkouts: (workoutIds: string[]) => void;
   toggleFavourite: (exerciseId: string) => void;
 }
 
@@ -93,8 +95,8 @@ const SEED_EXERCISES: Exercise[] = [
   { id: id(38), name: "Cable Overhead Extension",   muscleGroup: "UPPER_BODY", equipment: ["CABLE"],               metValue: 3.5, defaultSets: 3, defaultReps: 12, createdAt: S },
 
   // ── CORE ─────────────────────────────────────────────────────────────────
-  { id: id(39), name: "Plank",                      muscleGroup: "CORE",       equipment: ["BODYWEIGHT"],          metValue: 3.0, defaultSets: 3, defaultReps: 1,  createdAt: S },
-  { id: id(40), name: "Side Plank",                 muscleGroup: "CORE",       equipment: ["BODYWEIGHT"],          metValue: 2.8, defaultSets: 3, defaultReps: 1,  createdAt: S },
+  { id: id(39), name: "Plank",                      muscleGroup: "CORE",       equipment: ["BODYWEIGHT"],          metValue: 3.0, defaultSets: 3, defaultReps: 1,  isTimeBased: true, createdAt: S },
+  { id: id(40), name: "Side Plank",                 muscleGroup: "CORE",       equipment: ["BODYWEIGHT"],          metValue: 2.8, defaultSets: 3, defaultReps: 1,  isTimeBased: true, createdAt: S },
   { id: id(41), name: "Crunches",                   muscleGroup: "CORE",       equipment: ["BODYWEIGHT"],          metValue: 2.8, defaultSets: 3, defaultReps: 20, createdAt: S },
   { id: id(42), name: "Bicycle Crunch",             muscleGroup: "CORE",       equipment: ["BODYWEIGHT"],          metValue: 3.2, defaultSets: 3, defaultReps: 20, createdAt: S },
   { id: id(43), name: "Reverse Crunch",             muscleGroup: "CORE",       equipment: ["BODYWEIGHT"],          metValue: 2.8, defaultSets: 3, defaultReps: 15, createdAt: S },
@@ -129,6 +131,20 @@ const SEED_EXERCISES: Exercise[] = [
   { id: id(70), name: "Seated Calf Raise",          muscleGroup: "LOWER_BODY", equipment: ["MACHINE"],             metValue: 2.8, defaultSets: 4, defaultReps: 15, createdAt: S },
   { id: id(71), name: "Standing Calf Raise",        muscleGroup: "LOWER_BODY", equipment: ["BODYWEIGHT"],          metValue: 3.0, defaultSets: 4, defaultReps: 20, createdAt: S },
   { id: id(72), name: "Cable Pull Through",         muscleGroup: "LOWER_BODY", equipment: ["CABLE"],               metValue: 4.5, defaultSets: 3, defaultReps: 12, createdAt: S },
+
+  // ── TIME-BASED EXERCISES ─────────────────────────────────────────────────
+  { id: id(73), name: "Wall Sit",             muscleGroup: "LOWER_BODY", equipment: ["BODYWEIGHT"], metValue: 4.0,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(74), name: "Shadow Boxing",        muscleGroup: "UPPER_BODY", equipment: ["BODYWEIGHT"], metValue: 7.8,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(75), name: "Jump Rope",            muscleGroup: "LOWER_BODY", equipment: ["BODYWEIGHT"], metValue: 12.3, defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(76), name: "Flutter Kicks",        muscleGroup: "CORE",       equipment: ["BODYWEIGHT"], metValue: 4.0,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(77), name: "Leg Raise 30°",        muscleGroup: "CORE",       equipment: ["BODYWEIGHT"], metValue: 3.5,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(78), name: "Leg Raise 45°",        muscleGroup: "CORE",       equipment: ["BODYWEIGHT"], metValue: 3.5,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(79), name: "Leg Raise 90°",        muscleGroup: "CORE",       equipment: ["BODYWEIGHT"], metValue: 3.5,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(80), name: "Marching in Place",    muscleGroup: "LOWER_BODY", equipment: ["BODYWEIGHT"], metValue: 3.5,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(81), name: "Running in Place",     muscleGroup: "LOWER_BODY", equipment: ["BODYWEIGHT"], metValue: 8.0,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(82), name: "Farmer's Walk",        muscleGroup: "UPPER_BODY", equipment: ["DUMBBELL"],   metValue: 5.0,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(83), name: "Superman Hold",        muscleGroup: "CORE",       equipment: ["BODYWEIGHT"], metValue: 3.0,  defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
+  { id: id(84), name: "Battle Ropes",         muscleGroup: "UPPER_BODY", equipment: ["BODYWEIGHT"], metValue: 10.0, defaultSets: 3, defaultReps: 1, isTimeBased: true, createdAt: S },
 ];
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -211,6 +227,19 @@ export const useWorkoutStore = create<WorkoutState>()(
           };
         });
         set({ workouts: updatedWorkouts });
+      },
+
+      deleteWorkout: (workoutId: string) => {
+        set((state) => ({
+          workouts: state.workouts.filter((w) => w.id !== workoutId),
+        }));
+      },
+
+      deleteWorkouts: (workoutIds: string[]) => {
+        const idSet = new Set(workoutIds);
+        set((state) => ({
+          workouts: state.workouts.filter((w) => !idSet.has(w.id)),
+        }));
       },
 
       toggleFavourite: (exerciseId: string) => {
