@@ -8,7 +8,7 @@ appId: com.selvakumaras.workoutplanner
 - waitForAnimationToEnd
 - tapOn:
     point: "50%,75%"  # Weight input (approximate — profile fields: Name, Age, Gender, Height, Weight)
-- clearText
+- eraseText: 5
 - inputText: "75"
 - tapOn: "Save profile"
 - waitForAnimationToEnd

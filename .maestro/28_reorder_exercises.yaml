@@ -1,0 +1,80 @@
+appId: com.selvakumaras.workoutplanner
+---
+# Tests that exercises can be reordered using the ↑/↓ buttons in WorkoutDetailScreen.
+# Each exercise row exposes:
+#   accessibilityLabel: "Move <name> up"   (disabled / not tappable when exercise is first)
+#   accessibilityLabel: "Move <name> down" (disabled / not tappable when exercise is last)
+# Buttons only appear when there are 2+ exercises in the workout.
+#
+# Strategy: create a fresh "Reorder Test" workout, add two exercises (Bench Press + Barbell Squat),
+# then verify reordering works and can be reversed.
+- launchApp
+- waitForAnimationToEnd
+
+# ── Create a fresh workout for this test ──────────────────────────────────────
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Create new workout"
+- waitForAnimationToEnd
+- tapOn: "Workout name"
+- inputText: "Reorder Test"
+- tapOn: "Save workout"
+- waitForAnimationToEnd
+- tapOn: "Open workout Reorder Test"
+- waitForAnimationToEnd
+
+# ── Add first exercise: Bench Press (Upper Body) ──────────────────────────────
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- tapOn: "Filter exercises by Upper Body"
+- waitForAnimationToEnd
+- tapOn: "Select exercise Bench Press"
+- waitForAnimationToEnd
+- assertVisible: "Add to Workout"
+- tapOn: "Add to Workout"
+- waitForAnimationToEnd
+- assertVisible: "Edit exercise Bench Press"
+
+# ── Add second exercise: Barbell Squat (Legs) ─────────────────────────────────
+- tapOn: "Add exercise to workout"
+- waitForAnimationToEnd
+- tapOn: "Filter exercises by Legs"
+- waitForAnimationToEnd
+- tapOn: "Select exercise Barbell Squat"
+- waitForAnimationToEnd
+- assertVisible: "Add to Workout"
+- tapOn: "Add to Workout"
+- waitForAnimationToEnd
+- assertVisible: "Edit exercise Barbell Squat"
+
+# ── Both exercises are now present; reorder buttons must be visible ───────────
+# The first exercise (Bench Press) should have a "Move ... up" button visible
+# (it will be disabled because it is already at the top, but it must be rendered).
+- assertVisible: "Move Bench Press up"
+# The last exercise (Barbell Squat) should have a "Move ... down" button visible
+# (disabled because it is already at the bottom, but it must be rendered).
+- assertVisible: "Move Barbell Squat down"
+
+# ── Move Bench Press DOWN (it becomes second; Barbell Squat becomes first) ────
+- tapOn:
+    label: "Move Bench Press down"
+- waitForAnimationToEnd
+
+# After moving down, Bench Press is now last — its "Move ... down" button is disabled.
+# Barbell Squat is now first — its "Move ... up" button is disabled.
+# The "Move ... up" button for the originally-first exercise (Bench Press) should now
+# be visible and enabled (it is no longer at the top).
+- assertVisible: "Move Bench Press up"
+# Barbell Squat should now have a visible "Move ... down" button (it is first of two,
+# so its down button is enabled).
+- assertVisible: "Move Barbell Squat down"
+
+# ── Move Bench Press back UP (restores original order) ───────────────────────
+- tapOn:
+    label: "Move Bench Press up"
+- waitForAnimationToEnd
+
+# Order is restored: Bench Press first, Barbell Squat second.
+# Bench Press "up" button is disabled again (first position).
+- assertVisible: "Move Bench Press up"
+- assertVisible: "Move Barbell Squat down"

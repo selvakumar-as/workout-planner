@@ -1,0 +1,30 @@
+appId: com.selvakumaras.workoutplanner
+---
+# F5: Verifies that an exercise can be deleted from a workout detail screen.
+# Each exercise row now has a delete button (accessibilityLabel: "Delete exercise <name>").
+# Tapping it shows a confirmation Alert; tapping "Remove" removes the exercise.
+# Depends on 00_setup_session_workout having run first so "Test Workout E2E"
+# with at least "Bench Press" already exists.
+#
+# NOTE: As of the reorder feature, each exercise row also renders two reorder buttons
+# on the left side: "Move <name> up" and "Move <name> down". These are label-based
+# selectors and do not affect this flow — all taps here use accessibilityLabel and are
+# unaffected by the new UI elements.
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Navigate to My Workouts"
+- waitForAnimationToEnd
+- tapOn: "Open workout Test Workout E2E"
+- waitForAnimationToEnd
+# Confirm the exercise we are about to delete is present
+- assertVisible: "Edit exercise Bench Press"
+# Tap the delete button for Bench Press
+- tapOn: "Delete exercise Bench Press"
+- waitForAnimationToEnd
+# Confirm the confirmation alert appeared
+- assertVisible: "Remove"
+# Confirm the deletion
+- tapOn: "Remove"
+- waitForAnimationToEnd
+# Verify the exercise is no longer listed
+- assertNotVisible: "Edit exercise Bench Press"

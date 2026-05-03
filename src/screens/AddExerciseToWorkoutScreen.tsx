@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { FC, useState } from "react";
+import React, { FC, useEffect, useState } from "react";
 import {
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,18 +22,26 @@ import { getExerciseIcon } from "../utils/exerciseIcons";
 // ---------------------------------------------------------------------------
 
 const GROUP_LABELS: Record<ExerciseGroup, string> = {
-  UPPER_BODY: "Upper Body",
+  CHEST: "Chest",
+  BACK: "Back",
+  SHOULDERS: "Shoulders",
+  ARMS: "Arms",
   CORE: "Core",
-  LOWER_BODY: "Lower Body",
+  LEGS: "Legs",
+  FOREARMS: "Forearms",
 };
 
 type FilterOption = "ALL" | ExerciseGroup;
 
 const FILTER_OPTIONS: Array<{ key: FilterOption; label: string }> = [
   { key: "ALL", label: "All" },
-  { key: "UPPER_BODY", label: "Upper Body" },
+  { key: "CHEST", label: "Chest" },
+  { key: "BACK", label: "Back" },
+  { key: "SHOULDERS", label: "Shoulders" },
+  { key: "ARMS", label: "Arms" },
   { key: "CORE", label: "Core" },
-  { key: "LOWER_BODY", label: "Lower Body" },
+  { key: "LEGS", label: "Legs" },
+  { key: "FOREARMS", label: "Forearms" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -75,12 +84,26 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | undefined>(
     isEditMode ? exerciseId : undefined
   );
+  const [configModalVisible, setConfigModalVisible] = useState(false);
   const [sets, setSets] = useState<number | undefined>(existingEntry?.sets);
   const [reps, setReps] = useState<number | undefined>(existingEntry?.reps);
-  const [durationPerSetSecs, setDurationPerSetSecs] = useState<number | undefined>(existingEntry?.durationPerSetSecs);
+  const [durationMins, setDurationMins] = useState<number>(
+    existingEntry?.durationPerSetSecs !== undefined ? Math.floor(existingEntry.durationPerSetSecs / 60) : 0
+  );
+  const [durationSecs, setDurationSecs] = useState<number>(
+    existingEntry?.durationPerSetSecs !== undefined ? existingEntry.durationPerSetSecs % 60 : 30
+  );
   const [weightKg, setWeightKg] = useState<number | undefined>(existingEntry?.weightKg);
   const [restSeconds, setRestSeconds] = useState<number | undefined>(existingEntry?.restSeconds);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // In edit mode, open the config modal immediately
+  useEffect(() => {
+    if (isEditMode) {
+      setConfigModalVisible(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredExercises: Exercise[] =
     filter === "ALL"
@@ -91,6 +114,7 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
     ? vm.getExerciseById(selectedExerciseId)
     : undefined;
   const isTimeBased = selectedExercise?.isTimeBased ?? false;
+  const durationPerSetSecs = durationMins * 60 + durationSecs;
 
   const handleSave = () => {
     const result = AddExerciseToWorkoutFormSchema.safeParse({
@@ -115,8 +139,8 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
     }
 
     // Additional cross-field validation
-    if (isTimeBased && (durationPerSetSecs === undefined || durationPerSetSecs <= 0)) {
-      setErrors({ durationPerSetSecs: "Duration per set is required" });
+    if (isTimeBased && durationPerSetSecs <= 0) {
+      setErrors({ durationPerSetSecs: "Duration must be at least 1 second" });
       return;
     }
     if (!isTimeBased && (reps === undefined || reps <= 0)) {
@@ -143,12 +167,17 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
         restSeconds: result.data.restSeconds,
       });
     }
+    setConfigModalVisible(false);
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace(`/workouts/${workoutId}`);
     }
   };
+
+  const configExercise = selectedExerciseId !== undefined
+    ? vm.getExerciseById(selectedExerciseId)
+    : lockedExercise;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -174,7 +203,7 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
           </View>
         ) : (
           <>
-            {/* Step 1: Filter by group */}
+            {/* Filter by group */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Filter by Muscle Group</Text>
               <View style={styles.buttonRow}>
@@ -201,7 +230,7 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
               </View>
             </View>
 
-            {/* Step 2: Exercise selection */}
+            {/* Exercise selection — tap to open config modal */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Select Exercise *</Text>
               {filteredExercises.length === 0 ? (
@@ -229,8 +258,8 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
                       ]}
                       onPress={() => {
                         setSelectedExerciseId(exercise.id);
-                        if (errors.exerciseId)
-                          setErrors((prev) => ({ ...prev, exerciseId: "" }));
+                        setErrors({});
+                        setConfigModalVisible(true);
                       }}
                       accessibilityLabel={`Select exercise ${exercise.name}`}
                     >
@@ -280,85 +309,152 @@ const AddExerciseToWorkoutScreen: FC<AddExerciseToWorkoutScreenProps> = () => {
             </View>
           </>
         )}
+      </ScrollView>
 
-        {/* Step 3: Set / rep / weight / rest config */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Configure</Text>
-          <SetRepInput
-            label="Sets *"
-            value={sets}
-            onChange={(v) => {
-              setSets(v);
-              if (errors.sets) setErrors((prev) => ({ ...prev, sets: "" }));
-            }}
-            min={1}
-            max={20}
-            placeholder="e.g. 3"
-          />
-          {errors.sets ? (
-            <Text style={styles.errorText}>{errors.sets}</Text>
-          ) : null}
+      {/* Configuration Modal */}
+      <Modal
+        visible={configModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setConfigModalVisible(false)}
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.sheet}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={modalStyles.sheetContent}
+            >
+              {/* Exercise name header */}
+              <Text style={modalStyles.exerciseTitle}>
+                {configExercise?.name ?? "Configure"}
+              </Text>
+              {configExercise !== undefined && (
+                <Text style={modalStyles.exerciseGroup}>
+                  {GROUP_LABELS[configExercise.muscleGroup]}
+                </Text>
+              )}
 
-          {isTimeBased ? (
-            <>
+              {/* Sets */}
               <SetRepInput
-                label="Duration per Set (seconds) *"
-                value={durationPerSetSecs}
+                label="Sets *"
+                value={sets}
                 onChange={(v) => {
-                  setDurationPerSetSecs(v);
-                  if (errors.durationPerSetSecs) setErrors((prev) => ({ ...prev, durationPerSetSecs: "" }));
-                }}
-                min={10}
-                max={3600}
-                placeholder="e.g. 30"
-              />
-              {errors.durationPerSetSecs ? (
-                <Text style={styles.errorText}>{errors.durationPerSetSecs}</Text>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <SetRepInput
-                label="Reps *"
-                value={reps}
-                onChange={(v) => {
-                  setReps(v);
-                  if (errors.reps) setErrors((prev) => ({ ...prev, reps: "" }));
+                  setSets(v);
+                  if (errors.sets) setErrors((prev) => ({ ...prev, sets: "" }));
                 }}
                 min={1}
-                max={100}
-                placeholder="e.g. 10"
+                max={20}
+                placeholder="e.g. 3"
               />
-              {errors.reps ? (
-                <Text style={styles.errorText}>{errors.reps}</Text>
-              ) : null}
-            </>
-          )}
+              {errors.sets ? <Text style={modalStyles.errorText}>{errors.sets}</Text> : null}
 
-          <SetRepInput
-            label="Weight (kg, optional)"
-            value={weightKg}
-            onChange={setWeightKg}
-            min={0}
-            max={500}
-            allowDecimal
-            placeholder="e.g. 60"
-          />
+              {/* Reps or Duration */}
+              {isTimeBased ? (
+                <>
+                  <Text style={modalStyles.fieldLabel}>Duration per Set *</Text>
+                  <View style={modalStyles.durationRow}>
+                    {/* Minutes stepper */}
+                    <View style={modalStyles.stepperGroup}>
+                      <Text style={modalStyles.stepperLabel}>Min</Text>
+                      <View style={modalStyles.stepper}>
+                        <Pressable
+                          style={modalStyles.stepperButton}
+                          onPress={() => setDurationMins((m) => Math.max(0, m - 1))}
+                          accessibilityLabel="Decrease minutes"
+                        >
+                          <Text style={modalStyles.stepperButtonText}>−</Text>
+                        </Pressable>
+                        <Text style={modalStyles.stepperValue}>{durationMins}</Text>
+                        <Pressable
+                          style={modalStyles.stepperButton}
+                          onPress={() => setDurationMins((m) => Math.min(30, m + 1))}
+                          accessibilityLabel="Increase minutes"
+                        >
+                          <Text style={modalStyles.stepperButtonText}>+</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                    <Text style={modalStyles.durationColon}>:</Text>
+                    {/* Seconds stepper */}
+                    <View style={modalStyles.stepperGroup}>
+                      <Text style={modalStyles.stepperLabel}>Sec</Text>
+                      <View style={modalStyles.stepper}>
+                        <Pressable
+                          style={modalStyles.stepperButton}
+                          onPress={() => setDurationSecs((s) => Math.max(0, s - 5))}
+                          accessibilityLabel="Decrease seconds"
+                        >
+                          <Text style={modalStyles.stepperButtonText}>−</Text>
+                        </Pressable>
+                        <Text style={modalStyles.stepperValue}>{String(durationSecs).padStart(2, "0")}</Text>
+                        <Pressable
+                          style={modalStyles.stepperButton}
+                          onPress={() => setDurationSecs((s) => Math.min(59, s + 5))}
+                          accessibilityLabel="Increase seconds"
+                        >
+                          <Text style={modalStyles.stepperButtonText}>+</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                  {errors.durationPerSetSecs ? (
+                    <Text style={modalStyles.errorText}>{errors.durationPerSetSecs}</Text>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <SetRepInput
+                    label="Reps *"
+                    value={reps}
+                    onChange={(v) => {
+                      setReps(v);
+                      if (errors.reps) setErrors((prev) => ({ ...prev, reps: "" }));
+                    }}
+                    min={1}
+                    max={100}
+                    placeholder="e.g. 10"
+                  />
+                  {errors.reps ? <Text style={modalStyles.errorText}>{errors.reps}</Text> : null}
+                </>
+              )}
 
-          <RestTimerInput value={restSeconds} onChange={setRestSeconds} />
+              {/* Weight */}
+              <SetRepInput
+                label="Weight (kg, optional)"
+                value={weightKg}
+                onChange={setWeightKg}
+                min={0}
+                max={500}
+                allowDecimal
+                placeholder="e.g. 60"
+              />
+
+              {/* Rest */}
+              <RestTimerInput value={restSeconds} onChange={setRestSeconds} />
+
+              {/* Action buttons */}
+              <View style={modalStyles.buttonRow}>
+                <Pressable
+                  style={[modalStyles.button, modalStyles.cancelButton]}
+                  onPress={() => setConfigModalVisible(false)}
+                  accessibilityLabel="Cancel"
+                >
+                  <Text style={modalStyles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[modalStyles.button, modalStyles.saveButton]}
+                  onPress={handleSave}
+                  accessibilityLabel={isEditMode ? "Save exercise changes" : "Add exercise to workout"}
+                >
+                  <Text style={modalStyles.saveButtonText}>
+                    {isEditMode ? "Save Changes" : "Add to Workout"}
+                  </Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
         </View>
-
-        {/* Save button */}
-        <Pressable
-          style={styles.saveButton}
-          onPress={handleSave}
-          accessibilityLabel={isEditMode ? "Save exercise changes" : "Add exercise to workout"}
-        >
-          <Text style={styles.saveButtonText}>
-            {isEditMode ? "Save Changes" : "Add to Workout"}
-          </Text>
-        </Pressable>
-      </ScrollView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -498,19 +594,120 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 4,
   },
-  saveButton: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    backgroundColor: "#2563EB",
-    borderRadius: 12,
-    paddingVertical: 16,
+});
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "85%",
+  },
+  sheetContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+  exerciseTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 2,
+  },
+  exerciseGroup: {
+    fontSize: 13,
+    color: "#6B6B6B",
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 10,
+    marginTop: 8,
+  },
+  durationRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  durationColon: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#374151",
+    marginTop: 16,
+  },
+  stepperGroup: {
+    alignItems: "center",
+  },
+  stepperLabel: {
+    fontSize: 12,
+    color: "#6B6B6B",
+    marginBottom: 4,
+  },
+  stepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  stepperButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#E5E7EB",
+  },
+  stepperButtonText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#374151",
+  },
+  stepperValue: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    minWidth: 40,
+    textAlign: "center",
+    fontVariant: ["tabular-nums"],
+  },
+  errorText: {
+    fontSize: 12,
+    color: "#DC2626",
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 20,
+  },
+  button: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#F3F4F6",
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  saveButton: {
+    backgroundColor: "#2563EB",
   },
   saveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
+    color: "#FFFFFF",
   },
 });
 

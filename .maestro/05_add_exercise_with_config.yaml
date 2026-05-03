@@ -1,5 +1,8 @@
 appId: com.selvakumaras.workoutplanner
 ---
+# NOTE: Exercise rows in WorkoutDetailScreen now include ↑/↓ reorder buttons
+# (accessibilityLabel: "Move <name> up" / "Move <name> down"). All selectors in
+# this flow use label-based taps and are unaffected by the new row elements.
 - launchApp
 - waitForAnimationToEnd
 - tapOn: "Navigate to My Workouts"
@@ -8,27 +11,15 @@ appId: com.selvakumaras.workoutplanner
 - waitForAnimationToEnd
 - tapOn: "Add exercise to workout"
 - waitForAnimationToEnd
-- tapOn: "Filter exercises by Lower Body"
+# F2: filter label changed from "Lower Body" to "Legs" (Barbell Squat is in LEGS group)
+- tapOn: "Filter exercises by Legs"
 - waitForAnimationToEnd
 - tapOn: "Select exercise Barbell Squat"
 - waitForAnimationToEnd
-# Scroll to bottom to reach Sets/Reps section and Save button
-- swipe:
-    direction: UP
-    duration: 800
-- swipe:
-    direction: UP
-    duration: 800
-- swipe:
-    direction: UP
-    duration: 800
-- swipe:
-    direction: UP
-    duration: 800
-- waitForAnimationToEnd
-# Sets and reps section labels are "Sets *" and "Reps *"
+# F3: tapping an exercise now opens a slide-up modal
+# Wait for the modal to appear before interacting with Sets/Reps/Weight/Rest fields
 - assertVisible: "Sets *"
 - assertVisible: "Reps *"
-- tapOn: "Add exercise to workout"
+- tapOn: "Add to Workout"
 - waitForAnimationToEnd
 - assertVisible: "Add exercise to workout"

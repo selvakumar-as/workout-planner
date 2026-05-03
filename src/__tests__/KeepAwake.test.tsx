@@ -1,15 +1,15 @@
 /**
- * Tests for the AutoModeToggle restriction in ActiveSessionScreen.
+ * Tests for the useKeepAwake integration in ActiveSessionScreen.
  *
- * When autoTimerConfig === null and the session is not in auto mode, the toggle
- * is disabled and a hint text "Configure auto timer first" is visible.
- * When autoTimerConfig is set (non-null), the toggle is enabled.
+ * useKeepAwake() is called as the very first line of the component body,
+ * before any early returns. This means it must be called regardless of
+ * whether activeSession is null or not.
  *
  * Strategy:
- *   - Mock all ViewModel hooks and side-effect hooks at module level.
- *   - Use real AutoModeToggle (not mocked) so that the Switch's disabled prop
- *     and the hint text from ActiveSessionScreen are observable.
- *   - activeSession is always non-null so the screen renders its main content.
+ *   - Mock expo-keep-awake and verify useKeepAwake is called on every render.
+ *   - Use the same full mock setup as AutoModeToggle.test.tsx to ensure the
+ *     screen renders without crashing in both the active-session and
+ *     no-session states.
  */
 
 import React from "react";
@@ -107,10 +107,10 @@ jest.mock("../components/GracePeriodOverlay", () => {
 // ---------------------------------------------------------------------------
 
 import ActiveSessionScreen from "../screens/ActiveSessionScreen";
+import { useKeepAwake } from "expo-keep-awake";
 import { useSessionViewModel } from "../viewmodels/useSessionViewModel";
 import { useWorkoutViewModel } from "../viewmodels/useWorkoutViewModel";
 import { useUserProfileViewModel } from "../viewmodels/useUserProfileViewModel";
-import type { AutoTimerConfig } from "../types";
 
 // ---------------------------------------------------------------------------
 // Fixture data
@@ -134,28 +134,15 @@ const MOCK_EXERCISE = {
   createdAt: "2025-01-01T00:00:00.000Z",
 };
 
-const AUTO_TIMER_CONFIG: AutoTimerConfig = {
-  secondsPerSet: 45,
-  restBetweenSetsSecs: 60,
-  restBetweenExercisesSecs: 90,
-};
-
-function makeSessionVm(autoTimerConfig: AutoTimerConfig | null, autoMode = false) {
+function makeSessionVm(activeSession: object | null = null) {
   return {
-    activeSession: {
-      id: "session-1",
-      workoutId: "workout-1",
-      status: "IN_PROGRESS" as const,
-      startedAt: "2025-01-01T10:00:00.000Z",
-      sets: [],
-      autoMode,
-    },
+    activeSession,
     sessionHistory: [],
-    isSessionActive: true,
+    isSessionActive: activeSession !== null,
     sessionSets: [],
-    sessionStatus: "IN_PROGRESS" as const,
-    autoMode,
-    autoTimerConfig,
+    sessionStatus: activeSession !== null ? ("IN_PROGRESS" as const) : null,
+    autoMode: false,
+    autoTimerConfig: null,
     startSession: jest.fn(),
     completeSession: jest.fn(),
     abandonSession: jest.fn(),
@@ -186,6 +173,7 @@ function makeWorkoutVm() {
     deleteWorkout: jest.fn(),
     isWorkoutNameTaken: jest.fn(() => false),
     toggleFavourite: jest.fn(),
+    reorderExercises: jest.fn(),
   };
 }
 
@@ -197,6 +185,15 @@ function makeProfileVm() {
     setSoundEnabled: jest.fn(),
   };
 }
+
+const ACTIVE_SESSION = {
+  id: "session-1",
+  workoutId: "workout-1",
+  status: "IN_PROGRESS" as const,
+  startedAt: "2025-01-01T10:00:00.000Z",
+  sets: [],
+  autoMode: false,
+};
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -216,61 +213,30 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("ActiveSessionScreen", () => {
-  describe("AutoModeToggle restriction", () => {
-    it("should render the hint text when autoTimerConfig is null and not in auto mode", () => {
+describe("ActiveSessionScreen — useKeepAwake", () => {
+  describe("when activeSession is non-null (main content rendered)", () => {
+    it("should call useKeepAwake when the component renders with an active session", () => {
       (useSessionViewModel as jest.Mock).mockReturnValue(
-        makeSessionVm(null, false)
+        makeSessionVm(ACTIVE_SESSION)
       );
 
-      const { getByText } = render(<ActiveSessionScreen />);
+      render(<ActiveSessionScreen />);
 
-      expect(getByText("Configure auto timer first")).toBeTruthy();
+      expect(useKeepAwake).toHaveBeenCalled();
     });
+  });
 
-    it("should disable the Switch when autoTimerConfig is null and not in auto mode", () => {
+  describe("when activeSession is null (early-return fallback rendered)", () => {
+    it("should call useKeepAwake even when activeSession is null", () => {
+      // useKeepAwake is the first call in the component body, before the early
+      // return that guards against a null activeSession, so it must always run.
       (useSessionViewModel as jest.Mock).mockReturnValue(
-        makeSessionVm(null, false)
+        makeSessionVm(null)
       );
 
-      const { getByLabelText } = render(<ActiveSessionScreen />);
+      render(<ActiveSessionScreen />);
 
-      // The Switch has accessibilityLabel "Switch to auto mode" when isAuto is false.
-      const switchEl = getByLabelText("Switch to auto mode");
-      expect(switchEl.props.disabled).toBe(true);
-    });
-
-    it("should not render the hint text when autoTimerConfig is set", () => {
-      (useSessionViewModel as jest.Mock).mockReturnValue(
-        makeSessionVm(AUTO_TIMER_CONFIG, false)
-      );
-
-      const { queryByText } = render(<ActiveSessionScreen />);
-
-      expect(queryByText("Configure auto timer first")).toBeNull();
-    });
-
-    it("should enable the Switch when autoTimerConfig is set", () => {
-      (useSessionViewModel as jest.Mock).mockReturnValue(
-        makeSessionVm(AUTO_TIMER_CONFIG, false)
-      );
-
-      const { getByLabelText } = render(<ActiveSessionScreen />);
-
-      const switchEl = getByLabelText("Switch to auto mode");
-      expect(switchEl.props.disabled).toBe(false);
-    });
-
-    it("should not render the hint text when in auto mode (even without config)", () => {
-      // When already in auto mode the screen shows the AutoModeContent instead.
-      // The hint is only shown when NOT in auto mode and config is null.
-      (useSessionViewModel as jest.Mock).mockReturnValue(
-        makeSessionVm(null, true)
-      );
-
-      const { queryByText } = render(<ActiveSessionScreen />);
-
-      expect(queryByText("Configure auto timer first")).toBeNull();
+      expect(useKeepAwake).toHaveBeenCalled();
     });
   });
 });

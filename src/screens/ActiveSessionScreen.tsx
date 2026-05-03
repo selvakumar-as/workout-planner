@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useRef, useState } from "react";
+import React, { FC, useCallback, useEffect, useRef, useState } from "react";
 import {
   Image,
   Pressable,
@@ -23,6 +23,7 @@ import AutoModeToggle from "../components/AutoModeToggle";
 import GracePeriodOverlay from "../components/GracePeriodOverlay";
 import type { AutoTimerConfig, ExerciseGroup } from "../types";
 import { getExerciseIcon } from "../utils/exerciseIcons";
+import { useKeepAwake } from "expo-keep-awake";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -38,9 +39,13 @@ const GROUP_BADGE_CONFIG: Record<
   ExerciseGroup,
   { background: string; text: string; label: string }
 > = {
-  UPPER_BODY: { background: "#DBEAFE", text: "#1D4ED8", label: "Upper Body" },
-  CORE: { background: "#D1FAE5", text: "#065F46", label: "Core" },
-  LOWER_BODY: { background: "#FEF3C7", text: "#92400E", label: "Lower Body" },
+  CHEST:     { background: "#DBEAFE", text: "#1D4ED8", label: "Chest" },
+  BACK:      { background: "#E0F2FE", text: "#0369A1", label: "Back" },
+  SHOULDERS: { background: "#F3E8FF", text: "#7E22CE", label: "Shoulders" },
+  ARMS:      { background: "#FCE7F3", text: "#9D174D", label: "Arms" },
+  CORE:      { background: "#D1FAE5", text: "#065F46", label: "Core" },
+  LEGS:      { background: "#FEF3C7", text: "#92400E", label: "Legs" },
+  FOREARMS:  { background: "#FFF7ED", text: "#C2410C", label: "Forearms" },
 };
 
 // ---------------------------------------------------------------------------
@@ -275,6 +280,8 @@ interface AutoModeContentProps {
   getExerciseMetValue: (exerciseId: string) => number;
   userWeightKg: number;
   onCompleteNow: () => void;
+  soundEnabled: boolean;
+  onProgressUpdate: (exerciseIndex: number, setNumber: number) => void;
 }
 
 const AutoModeContent: FC<AutoModeContentProps> = ({
@@ -287,6 +294,8 @@ const AutoModeContent: FC<AutoModeContentProps> = ({
   getExerciseMetValue,
   userWeightKg,
   onCompleteNow,
+  soundEnabled,
+  onProgressUpdate,
 }) => {
   const noConfig = autoTimerConfig === null;
 
@@ -337,6 +346,18 @@ const AutoModeContent: FC<AutoModeContentProps> = ({
     },
     sounds
   );
+
+  useMetronomeTick({
+    enabled: soundEnabled,
+    isRunning: autoSession.phase === "RUNNING",
+    playTick: sounds.playTick,
+  });
+
+  const onProgressUpdateRef = useRef(onProgressUpdate);
+  onProgressUpdateRef.current = onProgressUpdate;
+  useEffect(() => {
+    onProgressUpdateRef.current(autoSession.currentExerciseIndex, autoSession.currentSetNumber);
+  }, [autoSession.currentExerciseIndex, autoSession.currentSetNumber]);
 
   useEffect(() => {
     if (autoSession.phase === "DONE" && autoCompleteSecsLeft === null) {
@@ -604,6 +625,7 @@ const autoStyles = StyleSheet.create({
 // ---------------------------------------------------------------------------
 
 const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
+  useKeepAwake();
   const sessionVm = useSessionViewModel();
   const workoutVm = useWorkoutViewModel();
   const sounds = useWorkoutSound();
@@ -612,6 +634,14 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   // Per-exercise navigation state (manual mode).
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
   const [currentSetNumber, setCurrentSetNumber] = useState<number>(1);
+
+  // Auto mode progress tracking (mirrors what AutoModeContent reports via callback).
+  const [autoExerciseIndex, setAutoExerciseIndex] = useState<number>(0);
+  const [autoSetNumber, setAutoSetNumber] = useState<number>(1);
+  const handleAutoProgressUpdate = useCallback((exerciseIndex: number, setNumber: number) => {
+    setAutoExerciseIndex(exerciseIndex);
+    setAutoSetNumber(setNumber);
+  }, []);
   const [isResting, setIsResting] = useState<boolean>(false);
   const [setStarted, setSetStarted] = useState<boolean>(false);
   const [isSetPaused, setIsSetPaused] = useState<boolean>(false);
@@ -723,7 +753,7 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
   const currentWorkoutExercise = sortedExercises[currentExerciseIndex];
   const exercise = workoutVm.getExerciseById(currentWorkoutExercise.exerciseId);
   const exerciseName = exercise?.name ?? "Unknown Exercise";
-  const muscleGroup: ExerciseGroup = exercise?.muscleGroup ?? "UPPER_BODY";
+  const muscleGroup: ExerciseGroup = exercise?.muscleGroup ?? "CHEST";
   const badgeConfig = GROUP_BADGE_CONFIG[muscleGroup];
   const totalSets = currentWorkoutExercise.sets;
   const restSeconds = currentWorkoutExercise.restSeconds ?? 0;
@@ -877,42 +907,42 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
         </View>
 
         {/* Exercise progress card (shown in both modes) */}
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Exercise Progress</Text>
-          {autoMode ? (
-            <Text style={styles.exerciseProgress}>
-              Auto mode active · {totalExercises} exercise{totalExercises !== 1 ? "s" : ""}
-            </Text>
-          ) : (
-            <>
+        {(() => {
+          const activeIndex = autoMode ? autoExerciseIndex : currentExerciseIndex;
+          const activeSet = autoMode ? autoSetNumber : currentSetNumber;
+          const activeEntry = sortedExercises[activeIndex] ?? sortedExercises[0];
+          const activeExercise = workoutVm.getExerciseById(activeEntry.exerciseId);
+          const activeName = activeExercise?.name ?? "Exercise";
+          const activeMuscleGroup: ExerciseGroup = activeExercise?.muscleGroup ?? "CHEST";
+          const activeBadge = GROUP_BADGE_CONFIG[activeMuscleGroup];
+          const activeTotalSets = activeEntry.sets;
+
+          return (
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Exercise Progress</Text>
               <Text style={styles.exerciseProgress}>
-                Exercise {currentExerciseIndex + 1} of {totalExercises}
+                Exercise {activeIndex + 1} of {totalExercises}
               </Text>
               <View style={styles.exerciseNameRow}>
                 <Image
-                  source={getExerciseIcon(currentWorkoutExercise.exerciseId)}
+                  source={getExerciseIcon(activeEntry.exerciseId)}
                   style={styles.exerciseIcon}
-                  accessibilityLabel={exerciseName}
+                  accessibilityLabel={activeName}
                 />
-                <Text style={styles.exerciseName}>{exerciseName}</Text>
-                <View
-                  style={[
-                    styles.groupBadge,
-                    { backgroundColor: badgeConfig.background },
-                  ]}
-                >
-                  <Text style={[styles.groupBadgeText, { color: badgeConfig.text }]}>
-                    {badgeConfig.label}
+                <Text style={styles.exerciseName}>{activeName}</Text>
+                <View style={[styles.groupBadge, { backgroundColor: activeBadge.background }]}>
+                  <Text style={[styles.groupBadgeText, { color: activeBadge.text }]}>
+                    {activeBadge.label}
                   </Text>
                 </View>
               </View>
               <Text style={styles.setProgress}>
-                Set {Math.min(currentSetNumber, totalSets)} of {totalSets}
-                {allSetsDone ? " (all sets done)" : ""}
+                Set {Math.min(activeSet, activeTotalSets)} of {activeTotalSets}
+                {!autoMode && allSetsDone ? " (all sets done)" : ""}
               </Text>
-            </>
-          )}
-        </View>
+            </View>
+          );
+        })()}
 
         {/* Auto mode content */}
         {autoMode && (
@@ -926,6 +956,8 @@ const ActiveSessionScreen: FC<ActiveSessionScreenProps> = () => {
             getExerciseMetValue={getExerciseMetValue}
             userWeightKg={userWeightKg}
             onCompleteNow={handleComplete}
+            soundEnabled={profile.soundEnabled}
+            onProgressUpdate={handleAutoProgressUpdate}
           />
         )}
 

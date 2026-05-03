@@ -29,6 +29,14 @@ function formatDate(isoString: string): string {
   });
 }
 
+function formatTime(isoString: string): string {
+  return new Date(isoString).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 function sumCalories(sets: SessionSet[]): number {
   return sets.reduce((total, s) => total + (s.caloriesBurnt ?? 0), 0);
 }
@@ -62,6 +70,10 @@ const SessionHistoryItem: FC<SessionHistoryItemProps> = ({ session }) => {
       </View>
       <View style={styles.historyItemInfo}>
         <Text style={styles.historyItemDate}>{formatDate(session.startedAt)}</Text>
+        <Text style={styles.historyItemTime}>
+          {formatTime(session.startedAt)}
+          {session.completedAt !== undefined ? ` – ${formatTime(session.completedAt)}` : ""}
+        </Text>
         <Text style={styles.historyItemSets}>{session.sets.length} sets logged</Text>
         {totalCalories > 0 && (
           <Text style={styles.historyItemCalories}>{totalCalories.toFixed(1)} cal</Text>
@@ -155,6 +167,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
     color: "#1A1A1A",
+  },
+  historyItemTime: {
+    fontSize: 12,
+    color: "#6B6B6B",
+    marginTop: 1,
+    fontVariant: ["tabular-nums"],
   },
   historyItemSets: {
     fontSize: 13,

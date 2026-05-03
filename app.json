@@ -3,6 +3,7 @@
     "owner": "selvakumaras",
     "name": "WorkoutPlanner",
     "slug": "WorkoutPlanner",
+    "scheme": "workoutplanner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

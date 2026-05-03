@@ -20,7 +20,7 @@ import { EquipmentValues, ExerciseGroupValues } from "../types";
 
 const AddExerciseFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  muscleGroup: z.enum(["UPPER_BODY", "CORE", "LOWER_BODY"], {
+  muscleGroup: z.enum(["CHEST", "BACK", "SHOULDERS", "ARMS", "CORE", "LEGS", "FOREARMS"], {
     error: "Muscle group is required",
   }),
   equipment: z.array(z.enum(["BARBELL", "DUMBBELL", "BODYWEIGHT", "CABLE", "MACHINE"])).optional(),
@@ -31,9 +31,13 @@ const AddExerciseFormSchema = z.object({
 // ---------------------------------------------------------------------------
 
 const GROUP_LABELS: Record<ExerciseGroup, string> = {
-  UPPER_BODY: "Upper Body",
+  CHEST: "Chest",
+  BACK: "Back",
+  SHOULDERS: "Shoulders",
+  ARMS: "Arms",
   CORE: "Core",
-  LOWER_BODY: "Lower Body",
+  LEGS: "Legs",
+  FOREARMS: "Forearms",
 };
 
 const EQUIPMENT_LABELS: Record<Equipment, string> = {

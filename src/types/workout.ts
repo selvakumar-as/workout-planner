@@ -4,7 +4,7 @@ import { z } from "zod";
 // Enums
 // ---------------------------------------------------------------------------
 
-export const ExerciseGroupSchema = z.enum(["UPPER_BODY", "CORE", "LOWER_BODY"]);
+export const ExerciseGroupSchema = z.enum(["CHEST", "BACK", "SHOULDERS", "ARMS", "CORE", "LEGS", "FOREARMS"]);
 export type ExerciseGroup = z.infer<typeof ExerciseGroupSchema>;
 export const ExerciseGroupValues = ExerciseGroupSchema.enum;
 

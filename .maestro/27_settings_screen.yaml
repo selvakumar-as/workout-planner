@@ -1,0 +1,19 @@
+appId: com.selvakumaras.workoutplanner
+---
+# F7: Verifies the Settings screen is reachable from the home screen and
+# displays all expected accordion sections (Backup, Help, About).
+- launchApp
+- waitForAnimationToEnd
+# Tap the gear icon on the home screen
+- tapOn: "Navigate to Settings"
+- waitForAnimationToEnd
+# Confirm the Settings stack header is visible
+- assertVisible: "Settings"
+# Confirm all accordion section headers are present
+- assertVisible: "Backup"
+- assertVisible: "Help"
+- assertVisible: "About"
+# Expand the Backup section and verify the Export Backup button appears
+- tapOn: "Backup"
+- waitForAnimationToEnd
+- assertVisible: "Export Backup"

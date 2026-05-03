@@ -1,7 +1,7 @@
 appId: com.selvakumaras.workoutplanner
 ---
 # Tests adding a time-based exercise (Plank) to a workout.
-# Verifies that the exercise form shows "Duration per Set (seconds) *" instead of "Reps *"
+# Verifies that the exercise config modal shows "Duration per Set (seconds) *" instead of "Reps *"
 # for time-based exercises, and that the exercise is saved successfully.
 - launchApp
 - waitForAnimationToEnd
@@ -17,18 +17,12 @@ appId: com.selvakumaras.workoutplanner
 - waitForAnimationToEnd
 - tapOn: "Add exercise to workout"
 - waitForAnimationToEnd
-# Filter by Core group to find Plank
+# F2: time-based exercises (Plank) are now in the CORE group
 - tapOn: "Filter exercises by Core"
 - waitForAnimationToEnd
 - tapOn: "Select exercise Plank"
 - waitForAnimationToEnd
-# Scroll down to the configuration section to reveal the Duration field
-- swipe:
-    direction: UP
-    duration: 800
-- swipe:
-    direction: UP
-    duration: 800
+# F3: tapping an exercise opens a slide-up modal
 # Time-based exercise should show Duration per Set field instead of Reps
 - assertVisible: "Duration per Set (seconds) *"
 # Enter Sets count
@@ -42,8 +36,8 @@ appId: com.selvakumaras.workoutplanner
 - inputText: "30"
 - tapOn: "Configure"
 - waitForAnimationToEnd
-# Save the exercise
-- tapOn: "Add exercise to workout"
+# Save the exercise via the modal button
+- tapOn: "Add to Workout"
 - waitForAnimationToEnd
 # Verify the exercise was added
 - assertVisible: "Edit exercise Plank"

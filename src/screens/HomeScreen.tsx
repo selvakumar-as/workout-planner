@@ -39,6 +39,14 @@ function formatDate(isoString: string): string {
   });
 }
 
+function formatTime(isoString: string): string {
+  return new Date(isoString).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 function sumCalories(sets: SessionSet[]): number {
   return sets.reduce((total, s) => total + (s.caloriesBurnt ?? 0), 0);
 }
@@ -68,6 +76,10 @@ const SessionHistoryItem: FC<SessionHistoryItemProps> = ({ session }) => {
       </View>
       <View style={styles.historyItemInfo}>
         <Text style={styles.historyItemDate}>{formatDate(session.startedAt)}</Text>
+        <Text style={styles.historyItemTime}>
+          {formatTime(session.startedAt)}
+          {session.completedAt !== undefined ? ` – ${formatTime(session.completedAt)}` : ""}
+        </Text>
         <Text style={styles.historyItemSets}>{session.sets.length} sets logged</Text>
         {totalCalories > 0 && (
           <Text style={styles.historyItemCalories}>{totalCalories.toFixed(1)} cal</Text>
@@ -112,7 +124,16 @@ const HomeScreen: FC<HomeScreenProps> = () => {
     <SafeAreaView style={styles.safeArea}>
       {/* Title */}
       <View style={styles.header}>
-        <Text style={styles.title}>WorkoutPlanner</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>WorkoutPlanner</Text>
+          <Pressable
+            style={styles.settingsButton}
+            onPress={() => router.push("/settings")}
+            accessibilityLabel="Navigate to Settings"
+          >
+            <Text style={styles.settingsButtonText}>⚙</Text>
+          </Pressable>
+        </View>
         <Pressable
           style={styles.workoutsButton}
           onPress={() => router.push("/workouts")}
@@ -224,10 +245,22 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   title: {
     fontSize: 28,
     fontWeight: "700",
     color: "#1A1A1A",
+  },
+  settingsButton: {
+    padding: 6,
+  },
+  settingsButtonText: {
+    fontSize: 24,
+    color: "#6B6B6B",
   },
   workoutsButton: {
     marginTop: 12,
@@ -275,6 +308,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
     color: "#1A1A1A",
+  },
+  historyItemTime: {
+    fontSize: 12,
+    color: "#6B6B6B",
+    marginTop: 1,
+    fontVariant: ["tabular-nums"],
   },
   historyItemSets: {
     fontSize: 13,

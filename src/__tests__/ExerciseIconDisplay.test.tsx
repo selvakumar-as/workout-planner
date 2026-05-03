@@ -23,6 +23,12 @@ jest.mock("../utils/exerciseIcons", () => ({
   getExerciseIcon: jest.fn(() => 1),
 }));
 
+// expo-keep-awake — ActiveSessionScreen calls useKeepAwake() at the top of
+// its component body; mock it to prevent the native module from loading.
+jest.mock("expo-keep-awake", () => ({
+  useKeepAwake: jest.fn(),
+}));
+
 // expo-router
 jest.mock("expo-router", () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => false) },
@@ -145,14 +151,14 @@ const MOCK_EXERCISES = [
   {
     id: BENCH_PRESS_ID,
     name: "Bench Press",
-    muscleGroup: "UPPER_BODY" as const,
+    muscleGroup: "CHEST" as const,
     isFavourite: false,
     createdAt: "2025-01-01T00:00:00.000Z",
   },
   {
     id: SQUAT_ID,
     name: "Squat",
-    muscleGroup: "LOWER_BODY" as const,
+    muscleGroup: "LEGS" as const,
     isFavourite: false,
     createdAt: "2025-01-01T00:00:00.000Z",
   },

@@ -11,6 +11,11 @@ appId: com.selvakumaras.workoutplanner
 - waitForAnimationToEnd
 # Confirm the History screen loaded
 - assertVisible: "Workout History"
+# F4: each history item now shows a HH:MM:SS timestamp line under the date
+# (e.g. "09:15:00 – 09:45:30"). Assert a colon is visible as a proxy for the time string.
+- assertVisible:
+    text: ":"
+    enabled: true
 # Navigate back to home
 - tapOn: "Go back to home"
 - waitForAnimationToEnd

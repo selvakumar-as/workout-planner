@@ -12,6 +12,7 @@ export default function RootLayout() {
       <Stack.Screen name="profile" options={{ title: "My Profile" }} />
       <Stack.Screen name="session-summary" options={{ title: "Session Summary" }} />
       <Stack.Screen name="metrics" options={{ title: "Metrics" }} />
+      <Stack.Screen name="settings" options={{ title: "Settings" }} />
     </Stack>
     </SafeAreaProvider>
   );

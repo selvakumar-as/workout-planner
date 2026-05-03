@@ -1,5 +1,8 @@
 appId: com.selvakumaras.workoutplanner
 ---
+# NOTE: Exercise rows in WorkoutDetailScreen now include ↑/↓ reorder buttons
+# (accessibilityLabel: "Move <name> up" / "Move <name> down"). All selectors in
+# this flow use label-based taps and are unaffected by the new row elements.
 - launchApp
 - waitForAnimationToEnd
 - tapOn: "Navigate to My Workouts"
@@ -8,25 +11,14 @@ appId: com.selvakumaras.workoutplanner
 - waitForAnimationToEnd
 - tapOn: "Add exercise to workout"
 - waitForAnimationToEnd
-- tapOn: "Filter exercises by Upper Body"
+# F2: filter label changed from "Upper Body" to "Chest" (Bench Press is in CHEST group)
+- tapOn: "Filter exercises by Chest"
 - waitForAnimationToEnd
 - tapOn: "Select exercise Bench Press"
 - waitForAnimationToEnd
-# Scroll all the way to bottom (past the long exercise list)
-- swipe:
-    direction: UP
-    duration: 800
-- swipe:
-    direction: UP
-    duration: 800
-- swipe:
-    direction: UP
-    duration: 800
-- swipe:
-    direction: UP
-    duration: 800
-- waitForAnimationToEnd
-- tapOn: "Add exercise to workout"
+# F3: tapping an exercise opens a slide-up modal — wait for it, then tap "Add to Workout"
+- assertVisible: "Add to Workout"
+- tapOn: "Add to Workout"
 - waitForAnimationToEnd
 # Should navigate back to workout detail
 - assertVisible: "Add exercise to workout"

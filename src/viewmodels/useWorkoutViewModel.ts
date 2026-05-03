@@ -20,6 +20,7 @@ export function useWorkoutViewModel() {
   const deleteWorkoutAction = useWorkoutStore((s) => s.deleteWorkout);
   const deleteWorkoutsAction = useWorkoutStore((s) => s.deleteWorkouts);
   const toggleFavouriteAction = useWorkoutStore((s) => s.toggleFavourite);
+  const reorderExercisesAction = useWorkoutStore((s) => s.reorderExercises);
 
   const sortedExercises = [...exercises].sort((a, b) => {
     const aFav = a.isFavourite ?? false;
@@ -92,6 +93,10 @@ export function useWorkoutViewModel() {
     toggleFavouriteAction(exerciseId);
   };
 
+  const reorderExercises = (workoutId: string, orderedExerciseIds: string[]): void => {
+    reorderExercisesAction(workoutId, orderedExerciseIds);
+  };
+
   return {
     // Data
     workouts,
@@ -110,5 +115,6 @@ export function useWorkoutViewModel() {
     deleteWorkouts,
     isWorkoutNameTaken,
     toggleFavourite,
+    reorderExercises,
   };
 }
